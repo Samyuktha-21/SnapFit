@@ -1,8 +1,10 @@
 export interface SizeRange {
-  chest_cm?: [number, number]; // [min, max] for Men
-  bust_cm?: [number, number];  // [min, max] for Women
-  waist_cm?: [number, number]; // [min, max]
-  length_cm: number;
+  chest_cm?: [number, number];    // [min, max] for Men
+  bust_cm?: [number, number];     // [min, max] for Women
+  waist_cm?: [number, number];    // [min, max]
+  hip_cm?: [number, number];      // [min, max]
+  shoulder_cm?: [number, number]; // [min, max]
+  length_cm?: number;
 }
 
 export interface SizeChart {
@@ -34,4 +36,11 @@ export interface MatchResult {
   isBorderline: boolean;
   borderlineMessage?: string;
   explanation: string;
+  // Full measurement ranges of the recommended size (for display).
+  chest_cm?: [number, number];
+  waist_cm?: [number, number];
+  hip_cm?: [number, number];
+  shoulder_cm?: [number, number];
 }
+
+export type FitPref = 'Slim' | 'True' | 'Relaxed';

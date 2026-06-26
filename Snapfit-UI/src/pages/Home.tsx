@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Shirt } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import GridMotion from '../components/GridMotion';
+import Logo from '../components/Logo';
 
 import { TextLoop } from '../components/core/text-loop';
 
@@ -23,10 +24,10 @@ export default function Home() {
 
       {/* Top Left Logo */}
       <div className="absolute top-6 left-6 md:top-8 md:left-8 flex items-center gap-2 z-50">
-        <div className="rounded-lg bg-slate-900 border border-slate-800 p-1.5 text-slate-100 shadow-sm">
-          <Shirt className="h-5 w-5" />
+        <div className="rounded-lg bg-accent p-1.5 text-black shadow-sm">
+          <Logo className="h-5 w-5" />
         </div>
-        <span className="text-xl font-bold tracking-tight text-white">SnapFit</span>
+        <span className="font-display text-2xl tracking-tight text-white">SnapFit</span>
       </div>
 
       <div className="relative z-10 w-full flex flex-col items-center">
@@ -77,7 +78,7 @@ export default function Home() {
             >
               <button
                 onClick={handleStart}
-                className="flex items-center gap-2 rounded-2xl bg-white hover:bg-slate-200 text-slate-950 font-extrabold text-sm md:text-base px-8 py-4 shadow-xl shadow-white/10 hover:shadow-white/25 transition-all duration-300 hover:scale-105 cursor-pointer"
+                className="flex items-center gap-2 rounded-2xl bg-accent hover:brightness-95 text-black font-extrabold text-sm md:text-base px-8 py-4 shadow-xl shadow-accent/20 hover:shadow-accent/40 transition-all duration-300 hover:scale-105 cursor-pointer"
               >
                 <span>Start Sizing Scan</span>
                 <ArrowRight className="h-5 w-5" />

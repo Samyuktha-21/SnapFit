@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { UserProfile, BodyMeasurements, ScanHistoryItem } from '../types/measurements';
-import type { BrandData } from '../types/brands';
+import type { BrandData, FitPref } from '../types/brands';
 
 interface MeasurementState {
   // Auth state
@@ -10,6 +10,10 @@ interface MeasurementState {
   // Height & Gender
   height: number;
   gender: 'Men' | 'Women';
+
+  // Display + fit preferences
+  unit: 'cm' | 'in';
+  fitPref: FitPref;
   
   // Stored profile (if scanned)
   bodyProfile: BodyMeasurements | null;
@@ -23,6 +27,8 @@ interface MeasurementState {
   // UI actions
   setHeight: (height: number) => void;
   setGender: (gender: 'Men' | 'Women') => void;
+  setUnit: (unit: 'cm' | 'in') => void;
+  setFitPref: (pref: FitPref) => void;
   setBodyProfile: (profile: BodyMeasurements | null) => void;
   setCapturedLandmarks: (landmarks: any | null) => void;
   addCustomBrand: (brand: BrandData) => void;
@@ -37,7 +43,9 @@ const STORAGE_KEYS = {
   HEIGHT: 'snapfit_height',
   GENDER: 'snapfit_gender',
   PROFILE: 'snapfit_profile',
-  CUSTOM_BRANDS: 'snapfit_custom_brands'
+  CUSTOM_BRANDS: 'snapfit_custom_brands',
+  UNIT: 'snapfit_unit',
+  FITPREF: 'snapfit_fitpref'
 };
 
 export const useMeasurementStore = create<MeasurementState>((set) => {
@@ -56,6 +64,8 @@ export const useMeasurementStore = create<MeasurementState>((set) => {
     user: savedUser,
     height: savedHeight ? Number(savedHeight) : 175, // default
     gender: savedGender || 'Men', // default
+    unit: (localStorage.getItem(STORAGE_KEYS.UNIT) as 'cm' | 'in') || 'cm',
+    fitPref: (localStorage.getItem(STORAGE_KEYS.FITPREF) as FitPref) || 'True',
     bodyProfile: savedProfile,
     capturedLandmarks: null,
     customBrands: savedCustomBrands,
@@ -71,6 +81,16 @@ export const useMeasurementStore = create<MeasurementState>((set) => {
       });
     },
     
+    setUnit: (unit) => {
+      localStorage.setItem(STORAGE_KEYS.UNIT, unit);
+      set({ unit });
+    },
+
+    setFitPref: (fitPref) => {
+      localStorage.setItem(STORAGE_KEYS.FITPREF, fitPref);
+      set({ fitPref });
+    },
+
     setGender: (gender) => {
       localStorage.setItem(STORAGE_KEYS.GENDER, gender);
       set((state) => {

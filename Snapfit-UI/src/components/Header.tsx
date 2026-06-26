@@ -1,5 +1,5 @@
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { Shirt } from 'lucide-react';
+import Logo from './Logo';
 
 export default function Header() {
   const location = useLocation();
@@ -14,11 +14,11 @@ export default function Header() {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="rounded-xl bg-white p-2 text-black shadow-md shadow-white/10 group-hover:scale-105 transition-transform duration-200">
-              <Shirt className="h-6 w-6" />
+            <div className="rounded-xl bg-accent p-2 text-black shadow-md shadow-accent/20 group-hover:scale-105 transition-transform duration-200">
+              <Logo className="h-6 w-6" />
             </div>
             <div>
-              <span className="text-xl font-bold text-white tracking-tight">
+              <span className="font-display text-2xl text-white tracking-tight">
                 SnapFit
               </span>
             </div>
@@ -65,8 +65,7 @@ export default function Header() {
           </nav>
 
           {/* User Controls */}
-          <div className="flex items-center gap-3">
-          </div>
+          <div className="flex items-center gap-3" />
         </div>
       </div>
     </header>

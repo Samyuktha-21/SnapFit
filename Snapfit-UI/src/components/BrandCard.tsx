@@ -1,110 +1,81 @@
 import { AlertCircle } from 'lucide-react';
-import type { BrandData } from '../types/brands';
+import type { BrandData, FitPref } from '../types/brands';
 import type { BodyMeasurements } from '../types/measurements';
 import { matchBrandSize } from '../services/sizeMatching';
+import { useMeasurementStore } from '../store/useMeasurementStore';
+import { fmtRange } from '../utils/units';
 import { Link } from 'react-router-dom';
 
 interface BrandCardProps {
   brand: BrandData;
   gender: 'Men' | 'Women';
   bodyProfile: BodyMeasurements;
-  activeFit: 'Regular' | 'Oversized';
+  fitPref: FitPref;
 }
 
-export default function BrandCard({
-  brand,
-  gender,
-  bodyProfile,
-  activeFit
-}: BrandCardProps) {
-  // Compute size match details
-  const matchResult = matchBrandSize(brand, bodyProfile, gender, activeFit);
-  
-  const isCustomBrand = brand.id !== undefined && !['Nike', 'Zara', 'Uniqlo'].includes(brand.brand);
+export default function BrandCard({ brand, gender, bodyProfile, fitPref }: BrandCardProps) {
+  const { unit } = useMeasurementStore();
+  const m = matchBrandSize(brand, bodyProfile, gender, 'Regular', fitPref);
 
-  const cardContent = (
-    <div className="flex flex-col h-full">
-      {/* Brand Header */}
-      <div className="flex justify-between items-start mb-6">
-        <div className="flex items-center gap-4">
-          {brand.logoUrl ? (
-            <div className="h-14 w-14 rounded-2xl bg-black/60 border border-white/10 p-2.5 flex items-center justify-center shadow-inner backdrop-blur-md">
-              <img 
-                src={brand.logoUrl} 
-                alt={`${brand.brand} logo`} 
-                className="max-h-full max-w-full object-contain filter invert opacity-90"
-              />
-            </div>
-          ) : (
-            <div className="h-14 w-14 rounded-2xl bg-neutral-900 border border-neutral-700 text-neutral-300 font-black flex items-center justify-center text-xl shadow-inner backdrop-blur-md">
-              {brand.brand.charAt(0)}
-            </div>
-          )}
-          <div className="flex flex-col">
-            <h3 className="text-2xl font-extrabold text-white tracking-tight drop-shadow-sm">{brand.brand}</h3>
-            <span className="text-[11px] text-neutral-400 font-bold uppercase tracking-widest mt-0.5">{activeFit} Fit</span>
+  const ranges: [string, [number, number] | undefined][] = [
+    [gender === 'Women' ? 'Bust' : 'Chest', m.chest_cm],
+    ['Waist', m.waist_cm],
+    ['Hip', m.hip_cm],
+  ];
+
+  return (
+    <Link
+      to={`/brands/${encodeURIComponent(brand.brand)}`}
+      className="group block h-full w-full rounded-[2rem] bg-gradient-to-br from-neutral-900/90 to-black/90 border border-white/10 p-7 flex flex-col backdrop-blur-xl shadow-[0_0_30px_rgba(0,0,0,0.4)] hover:border-accent/40 hover:-translate-y-1.5 transition-all duration-400 relative overflow-hidden"
+    >
+      {/* Accent glow */}
+      <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-accent/10 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+      <div className="relative z-10 flex flex-col h-full">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-5">
+          <div className="h-12 w-12 rounded-2xl bg-neutral-900 border border-neutral-700 text-white font-display text-xl flex items-center justify-center">
+            {brand.brand.charAt(0)}
+          </div>
+          <div>
+            <h3 className="text-xl font-extrabold text-white tracking-tight">{brand.brand}</h3>
+            <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">{fitPref} fit</span>
           </div>
         </div>
 
-        {/* Custom Brand Tag */}
-        {isCustomBrand && (
-          <span className="rounded-full bg-white/10 border border-white/20 px-2.5 py-1 text-[10px] font-black text-white uppercase tracking-widest shadow-sm">
-            Custom
+        {/* Recommended size */}
+        <div className="flex items-end justify-between rounded-3xl bg-black/30 p-5 border border-white/5">
+          <div>
+            <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Your size</span>
+            <span className="text-5xl font-black text-accent tracking-tight leading-none">{m.recommendedSize}</span>
+          </div>
+          <span className="text-xs font-black px-3 py-1.5 rounded-full bg-accent/15 text-accent border border-accent/30">
+            {m.confidence}% match
           </span>
+        </div>
+
+        {/* Measurement ranges for that size */}
+        <div className="grid grid-cols-3 gap-2 mt-4">
+          {ranges.map(([label, r]) => (
+            <div key={label} className="rounded-xl bg-black/30 border border-neutral-800 p-2.5 text-center">
+              <span className="block text-[9px] uppercase tracking-widest text-neutral-500">{label}</span>
+              <span className="block text-[11px] font-bold text-neutral-200 mt-0.5 tabular-nums">{fmtRange(r, unit)}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Borderline note */}
+        {m.isBorderline && (
+          <div className="mt-4 flex items-start gap-2 rounded-2xl bg-neutral-900/60 border border-neutral-700 p-3">
+            <AlertCircle className="h-4 w-4 text-accent flex-shrink-0 mt-0.5" />
+            <p className="text-[11px] font-medium text-neutral-300 leading-relaxed">{m.borderlineMessage}</p>
+          </div>
         )}
-      </div>
 
-      {/* Recommended Size Box */}
-      <div className="flex items-center justify-between mt-auto bg-black/20 rounded-3xl p-6 border border-white/5 backdrop-blur-sm">
-        <div className="flex flex-col">
-          <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Recommended Size</span>
-          <span className="text-4xl font-black text-white font-sans tracking-tight drop-shadow-md">
-            {matchResult.recommendedSize}
-          </span>
-        </div>
-
-        <div className="flex flex-col items-end">
-          <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest mb-2">Confidence</span>
-          <span className="text-sm font-black px-3 py-1.5 rounded-full border bg-white/10 text-white border-white/20">
-            {matchResult.confidence}% Match
-          </span>
-        </div>
-      </div>
-
-      {/* Borderline Indicator */}
-      {matchResult.isBorderline && (
-        <div className="mt-4 flex items-start gap-2 rounded-2xl bg-neutral-900/50 border border-neutral-700 p-4">
-          <AlertCircle className="h-4 w-4 text-neutral-400 flex-shrink-0 mt-0.5" />
-          <p className="text-xs font-semibold text-neutral-300 leading-relaxed">
-            Borderline: runs slightly {matchResult.borderlineMessage?.includes('slim') ? 'slim' : 'loose'}.
-          </p>
-        </div>
-      )}
-
-      {/* Footer link trigger */}
-      <div className="mt-6 text-right">
-        <span className="text-[12px] font-bold text-neutral-400 group-hover:text-white transition-colors tracking-wide">
-          View Detailed Metrics →
+        <span className="mt-auto pt-5 text-right text-[11px] font-bold text-neutral-400 group-hover:text-accent transition-colors">
+          View detail →
         </span>
       </div>
-    </div>
-  );
-
-  return (
-    <div className="relative group h-full w-full">
-      <Link
-        to={`/brands/${brand.brand}?fit=${activeFit}`}
-        className="block h-full w-full rounded-[2.5rem] bg-gradient-to-br from-neutral-900/90 to-black/90 border border-white/10 p-8 flex flex-col justify-between backdrop-blur-3xl shadow-[0_0_30px_rgba(255,255,255,0.05)] hover:border-white/20 hover:-translate-y-2 transition-all duration-500 relative overflow-hidden"
-      >
-        {/* Decorative inner glow */}
-        <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:opacity-40 transition-opacity duration-700 blur-3xl transform translate-x-1/4 -translate-y-1/4 pointer-events-none">
-          <div className="w-40 h-40 rounded-full bg-white/20"></div>
-        </div>
-        
-        <div className="relative z-10 h-full">
-          {cardContent}
-        </div>
-      </Link>
-    </div>
+    </Link>
   );
 }

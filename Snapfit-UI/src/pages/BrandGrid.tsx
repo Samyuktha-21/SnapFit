@@ -3,18 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { useMeasurementStore } from '../store/useMeasurementStore';
 import { firestore } from '../services/firebase';
 import type { BrandData } from '../types/brands';
-import { AlertCircle, ShoppingBag } from 'lucide-react';
-import FitToggle from '../components/FitToggle';
+import { AlertCircle, ShoppingBag, Search } from 'lucide-react';
+import FitPrefToggle from '../components/FitPrefToggle';
+import UnitToggle from '../components/UnitToggle';
 import BrandCard from '../components/BrandCard';
 import MeasurementsTable from '../components/MeasurementsTable';
 
 export default function BrandGrid() {
   const navigate = useNavigate();
-  const { bodyProfile, gender } = useMeasurementStore();
+  const { bodyProfile, gender, fitPref } = useMeasurementStore();
 
-  const [activeFit, setActiveFit] = useState<'Regular' | 'Oversized'>('Regular');
   const [brands, setBrands] = useState<BrandData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+
+  const visibleBrands = brands.filter((b) =>
+    b.brand.toLowerCase().includes(query.trim().toLowerCase()),
+  );
 
   // Load all brands from Firestore/LocalStorage Database
   useEffect(() => {
@@ -69,8 +74,18 @@ export default function BrandGrid() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <FitToggle value={activeFit} onChange={setActiveFit} />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search brands"
+                className="w-40 sm:w-48 pl-9 pr-3 py-2 rounded-xl bg-black border border-neutral-800 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-accent/50"
+              />
+            </div>
+            <FitPrefToggle />
+            <UnitToggle />
           </div>
         </div>
 
@@ -93,8 +108,10 @@ export default function BrandGrid() {
           <div 
             className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-6 px-6 md:pl-[calc((100vw-72rem)/2+1.5rem)] md:pr-6 pb-16 pt-4"
           >
-            {brands.map((brand, idx) => (
-              <div 
+            {visibleBrands.length === 0 ? (
+              <p className="text-sm text-neutral-500 px-6 py-10">No brands match “{query}”.</p>
+            ) : visibleBrands.map((brand, idx) => (
+              <div
                 key={brand.id || `${brand.brand}_${idx}`}
                 className="snap-start shrink-0 w-[85vw] sm:w-[400px] md:w-[420px] h-[400px]"
               >
@@ -102,7 +119,7 @@ export default function BrandGrid() {
                   brand={brand}
                   gender={gender}
                   bodyProfile={bodyProfile}
-                  activeFit={activeFit}
+                  fitPref={fitPref}
                 />
               </div>
             ))}

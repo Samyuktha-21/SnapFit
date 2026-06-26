@@ -10,6 +10,7 @@ import { useMeasurementStore } from '../store/useMeasurementStore';
 import { useSnapFitMeasurement } from '../scanfit/useSnapFitMeasurement';
 import { predictMeasurements, cmToIn } from '../scanfit/bodyModel';
 import TipsCard from '../components/TipsCard';
+import SizePassport from '../components/SizePassport';
 
 const PHASE_LABEL = {
   front: 'Step 1 · Front view',
@@ -171,7 +172,7 @@ export default function ScanFit() {
                 {/* Size + measurements table */}
                 <div className="flex items-center gap-3 mb-4">
                   <span className="text-[11px] uppercase tracking-widest text-neutral-500">Recommended size</span>
-                  <span className="text-2xl font-black text-white">
+                  <span className="text-3xl font-black text-accent">
                     {buildProfile().size}
                   </span>
                 </div>
@@ -200,7 +201,7 @@ export default function ScanFit() {
                 {/* Actions */}
                 <div className="grid grid-cols-2 gap-3">
                   <button onClick={() => saveAndGo('/brands')}
-                    className="flex items-center justify-center gap-1.5 rounded-xl bg-white hover:bg-neutral-200 text-black font-bold text-sm py-3 transition-colors cursor-pointer">
+                    className="flex items-center justify-center gap-1.5 rounded-xl bg-accent hover:brightness-95 text-black font-bold text-sm py-3 transition cursor-pointer">
                     Brand Sizes <ArrowRight className="h-4 w-4" />
                   </button>
                   <button onClick={() => saveAndGo('/comparison')}
@@ -210,8 +211,13 @@ export default function ScanFit() {
                 </div>
 
                 <p className="text-[11px] text-neutral-600 leading-relaxed mt-4">
-                  Measurements are estimated from height, weight &amp; sex — the ±cm is the model&apos;s real average error.
+                  Measurements are estimated from height, weight &amp; sex. The ±cm is the model&apos;s real average error.
                 </p>
+
+                {/* Size Passport — shareable downloadable card */}
+                <div className="mt-8 pt-6 border-t border-neutral-800">
+                  <SizePassport profile={buildProfile()} gender={sex === 'male' ? 'Men' : 'Women'} />
+                </div>
               </>
             ) : (
               <p className="text-xs text-neutral-500">Enter your height &amp; weight to see your measurements.</p>

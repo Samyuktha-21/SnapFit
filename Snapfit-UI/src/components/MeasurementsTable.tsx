@@ -1,6 +1,6 @@
 import type { BodyMeasurements } from '../types/measurements';
-
-const cmToIn = (cm: number) => Math.round((cm / 2.54) * 10) / 10;
+import { useMeasurementStore } from '../store/useMeasurementStore';
+import { fmtVal } from '../utils/units';
 
 interface Props {
   profile: BodyMeasurements;
@@ -8,8 +8,10 @@ interface Props {
 }
 
 // Tabular view of the user's measurements (from the ScanFit model), shown atop
-// the Brand Grid and Comparison pages.
+// the Brand Grid and Comparison pages. Respects the global cm/in unit.
 export default function MeasurementsTable({ profile, gender }: Props) {
+  const { unit } = useMeasurementStore();
+
   const rows: [string, number][] = [
     ['Shoulder', profile.shoulderWidth],
     [gender === 'Women' ? 'Bust' : 'Chest', profile.chestWidth],
@@ -18,31 +20,21 @@ export default function MeasurementsTable({ profile, gender }: Props) {
   ];
 
   return (
-    <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-5 shadow-[0_0_30px_rgba(255,255,255,0.04)]">
-      <div className="flex items-center justify-between mb-3">
+    <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-5 shadow-[0_0_30px_rgba(212,255,63,0.06)]">
+      <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-bold text-white">Your Measurements</h3>
-        <span className="text-[11px] text-neutral-500">
-          Size {profile.size} · {profile.confidence}% confidence
+        <span className="text-[11px] text-neutral-400">
+          Size <span className="text-accent font-bold">{profile.size}</span> · {profile.confidence}% confidence
         </span>
       </div>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-neutral-500 text-[11px]">
-            <th className="text-left font-medium py-1"></th>
-            <th className="text-right font-medium py-1">cm</th>
-            <th className="text-right font-medium py-1">in</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(([label, cm]) => (
-            <tr key={label} className="border-t border-neutral-800/70">
-              <td className="text-left text-white font-semibold py-2">{label}</td>
-              <td className="text-right text-neutral-200 py-2 tabular-nums">{cm}</td>
-              <td className="text-right text-neutral-400 py-2 tabular-nums">{cmToIn(cm)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {rows.map(([label, cm]) => (
+          <div key={label} className="rounded-xl bg-black/40 border border-neutral-800 p-3">
+            <span className="block text-[10px] uppercase tracking-widest text-neutral-500">{label}</span>
+            <span className="block text-lg font-black text-white tabular-nums mt-1">{fmtVal(cm, unit)}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

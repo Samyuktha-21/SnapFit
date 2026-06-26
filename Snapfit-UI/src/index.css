@@ -1,7 +1,17 @@
 @import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;0,6..96,700;1,6..96,400&display=swap");
 
 @theme {
-  --font-sans: "Satoshi", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bodoni Moda", Georgia, "Times New Roman", serif;
+  /* Vibrant signature accent — electric lime against the near-black base. */
+  --color-accent: #d4ff3f;
+  --color-accent-soft: #e9ff8f;
+}
+
+/* Fashion-editorial display face — used for the wordmark and headlines. */
+.font-display {
+  font-family: var(--font-display);
 }
 
 @keyframes spin-reverse {
@@ -19,11 +29,11 @@
 
 /* Custom dark mode overrides */
 body {
-  background-color: #000000; /* Pure Black */
+  background-color: #050505; /* near-black, not pure #000 */
   color: #f1f5f9;
   min-height: 100vh;
   margin: 0;
-  font-family: "Satoshi", system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: "Archivo", system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
