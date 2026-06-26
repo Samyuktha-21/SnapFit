@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import { useMeasurementStore } from '../store/useMeasurementStore';
 import { firestore } from '../services/firebase';
-import { Plus, Trash2, Code, FileText, CheckCircle2, AlertTriangle, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Plus, Trash2, Code, FileText, CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react';
 import type { BrandData, SizeChart } from '../types/brands';
 
 type TabOption = 'manual' | 'json' | 'csv';
