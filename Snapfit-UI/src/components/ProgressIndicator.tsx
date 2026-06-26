@@ -26,8 +26,8 @@ export default function ProgressIndicator({ currentStep }: ProgressIndicatorProp
                 <div 
                   className={`absolute top-5 left-1/2 right-[-50%] h-[2px] -z-10 transition-colors duration-300 ${
                     isCompleted 
-                      ? 'bg-gradient-to-r from-indigo-500 to-indigo-500' 
-                      : 'bg-slate-800'
+                      ? 'bg-neutral-300' 
+                      : 'bg-neutral-800'
                   }`} 
                 />
               )}
@@ -36,10 +36,10 @@ export default function ProgressIndicator({ currentStep }: ProgressIndicatorProp
               <div 
                 className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-all duration-300 ${
                   isCompleted 
-                    ? 'bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-500/20' 
+                    ? 'bg-white border-white text-black shadow-md shadow-white/20' 
                     : isActive
-                      ? 'bg-slate-950 border-indigo-500 text-indigo-400 scale-110 shadow-lg shadow-indigo-500/10'
-                      : 'bg-slate-950 border-slate-800 text-slate-500'
+                      ? 'bg-black border-white text-white scale-110 shadow-lg shadow-white/10'
+                      : 'bg-black border-neutral-800 text-neutral-500'
                 }`}
               >
                 {isCompleted ? (
@@ -52,12 +52,12 @@ export default function ProgressIndicator({ currentStep }: ProgressIndicatorProp
               {/* Text labels */}
               <span 
                 className={`mt-2.5 text-xs font-semibold tracking-wide transition-colors ${
-                  isActive ? 'text-indigo-400 font-bold' : isCompleted ? 'text-slate-300' : 'text-slate-500'
+                  isActive ? 'text-white font-bold' : isCompleted ? 'text-neutral-300' : 'text-neutral-500'
                 }`}
               >
                 {step.label}
               </span>
-              <span className="hidden sm:block text-[10px] text-slate-600 mt-0.5">
+              <span className="hidden sm:block text-[10px] text-neutral-600 mt-0.5">
                 {step.desc}
               </span>
             </div>
