@@ -2,18 +2,24 @@ import { Shirt } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="w-full border-t border-slate-900 bg-slate-950 py-12 px-6 mt-auto">
-      <div className="mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-6">
+    <footer className="w-full relative z-10 py-12 px-6 mt-auto">
+      <div className="mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-6 drop-shadow-xl">
         <div className="flex items-center gap-2">
-          <div className="rounded-lg bg-slate-900 border border-slate-800 p-1.5 text-slate-400">
+          <div className="rounded-lg bg-black/5 p-2 text-black shadow-sm">
             <Shirt className="h-4 w-4" />
           </div>
-          <span className="text-sm font-semibold text-slate-400">
-            SnapFit <span className="text-xs font-normal text-slate-600">v1.0.0</span>
+          <span className="text-base font-black tracking-wide text-black">
+            SnapFit
           </span>
         </div>
-        <p className="text-xs text-slate-600 text-center md:text-right">
-          © 2026 SnapFit Hackathon Project. All rights reserved. Measure once. Fit everywhere.
+        
+        <div className="flex items-center gap-6 text-sm font-black tracking-wide text-black">
+          <a href="#" className="hover:text-neutral-700 transition-colors">About Us</a>
+          <a href="#" className="hover:text-neutral-700 transition-colors">Contacts</a>
+        </div>
+
+        <p className="text-xs font-bold tracking-wide text-black text-center md:text-right">
+          © {new Date().getFullYear()} @SnapFit
         </p>
       </div>
     </footer>
