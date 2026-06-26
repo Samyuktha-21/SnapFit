@@ -8,7 +8,7 @@ import { TextLoop } from '../components/core/text-loop';
 export default function Home() {
   const navigate = useNavigate();
   const handleStart = () => {
-    navigate('/height-input');
+    navigate('/scanfit');
   };
 
   // Create an array of 28 items repeating the 12 shirt images

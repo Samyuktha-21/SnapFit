@@ -4,6 +4,7 @@ import Footer from './components/Footer';
 
 // Pages
 import Home from './pages/Home';
+import ScanFit from './pages/ScanFit';
 import HeightInput from './pages/HeightInput';
 import Capture from './pages/Capture';
 import Processing from './pages/Processing';
@@ -23,7 +24,10 @@ export default function App() {
         <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-8 py-6">
           <Routes>
             <Route path="/" element={<Home />} />
-            
+
+            {/* Our measurement model */}
+            <Route path="/scanfit" element={<ScanFit />} />
+
             {/* Onboarding & Scanning Sequence */}
             <Route path="/height-input" element={<HeightInput />} />
             <Route path="/capture" element={<Capture />} />

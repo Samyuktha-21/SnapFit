@@ -21,32 +21,17 @@ export default function Header() {
               <span className="text-xl font-bold text-white tracking-tight">
                 SnapFit
               </span>
-              <span className="hidden sm:block text-[10px] text-neutral-400 font-medium tracking-wider uppercase">
-                Universal Fit Engine
-              </span>
             </div>
           </Link>
 
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center gap-1">
             <NavLink
-              to="/"
+              to="/scanfit"
               className={({ isActive }) =>
                 `px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                  isActive 
-                    ? 'text-white bg-slate-900 border border-slate-800/60' 
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/30'
-                }`
-              }
-            >
-              Home
-            </NavLink>
-            <NavLink
-              to="/height-input"
-              className={({ isActive }) =>
-                `px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                  isActive 
-                    ? 'text-white bg-slate-900 border border-slate-800/60' 
+                  isActive
+                    ? 'text-white bg-slate-900 border border-slate-800/60'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/30'
                 }`
               }

@@ -24,7 +24,7 @@ export default function Auth() {
       } else {
         await signIn(email);
       }
-      navigate('/height-input');
+      navigate('/scanfit');
     } catch (err) {
       console.error(err);
     }
@@ -33,7 +33,7 @@ export default function Auth() {
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
-      navigate('/height-input');
+      navigate('/scanfit');
     } catch (err) {
       console.error(err);
     }

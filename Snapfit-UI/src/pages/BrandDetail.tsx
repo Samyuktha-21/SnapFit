@@ -42,7 +42,7 @@ export default function BrandDetail() {
         <p className="text-xs text-slate-500 max-w-sm mb-6">
           Please capture measurements before viewing detail charts.
         </p>
-        <button onClick={() => navigate('/height-input')} className="rounded-xl bg-white text-black hover:bg-neutral-200 px-6 py-3 cursor-pointer">
+        <button onClick={() => navigate('/scanfit')} className="rounded-xl bg-white text-black hover:bg-neutral-200 px-6 py-3 cursor-pointer">
           Scan Now
         </button>
       </div>

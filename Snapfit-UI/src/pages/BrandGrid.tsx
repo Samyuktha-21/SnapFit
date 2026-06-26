@@ -6,6 +6,7 @@ import type { BrandData } from '../types/brands';
 import { AlertCircle, ShoppingBag } from 'lucide-react';
 import FitToggle from '../components/FitToggle';
 import BrandCard from '../components/BrandCard';
+import MeasurementsTable from '../components/MeasurementsTable';
 
 export default function BrandGrid() {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ export default function BrandGrid() {
           We need your chest/bust measurements to compute brand sizing. Please capture a quick scan first.
         </p>
         <button
-          onClick={() => navigate('/height-input')}
+          onClick={() => navigate('/scanfit')}
           className="rounded-xl bg-white hover:bg-neutral-200 text-black font-bold text-sm px-6 py-3 transition-colors cursor-pointer"
         >
           Measure Now
@@ -72,6 +73,9 @@ export default function BrandGrid() {
             <FitToggle value={activeFit} onChange={setActiveFit} />
           </div>
         </div>
+
+        {/* Tabular measurements summary */}
+        <MeasurementsTable profile={bodyProfile} gender={gender} />
       </div>
 
       {/* Brand Recommendations Carousel */}

@@ -19,7 +19,7 @@ export default function Results() {
           You need to complete a quick body scan capture before viewing sizing results.
         </p>
         <button
-          onClick={() => navigate('/height-input')}
+          onClick={() => navigate('/scanfit')}
           className="rounded-xl bg-white hover:bg-neutral-200 text-black font-bold text-sm px-6 py-3 transition-colors cursor-pointer"
         >
           Start Scan
@@ -95,7 +95,7 @@ export default function Results() {
         {/* Action Buttons */}
         <div className="md:col-span-2 lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
           <button
-            onClick={() => navigate('/height-input')}
+            onClick={() => navigate('/scanfit')}
             className="w-full flex items-center justify-center gap-2 rounded-3xl border border-neutral-800 bg-black/70 backdrop-blur-sm hover:bg-neutral-900 text-neutral-300 hover:text-white font-bold text-sm px-6 py-5 shadow-xl hover:border-neutral-700 transition-all cursor-pointer group"
           >
             <RotateCcw className="h-4 w-4 group-hover:-rotate-45 transition-transform duration-300" />

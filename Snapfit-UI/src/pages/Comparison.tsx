@@ -5,6 +5,7 @@ import { firestore } from '../services/firebase';
 import type { BrandData } from '../types/brands';
 import { matchBrandSize } from '../services/sizeMatching';
 import { LayoutGrid } from 'lucide-react';
+import MeasurementsTable from '../components/MeasurementsTable';
 
 export default function Comparison() {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ export default function Comparison() {
           Compare sizing matrices after capturing your body measurements.
         </p>
         <button
-          onClick={() => navigate('/height-input')}
+          onClick={() => navigate('/scanfit')}
           className="rounded-xl bg-white hover:bg-neutral-200 text-black font-bold text-sm px-6 py-3 cursor-pointer"
         >
           Measure Now
@@ -58,54 +59,51 @@ export default function Comparison() {
     };
   });
 
+  const measureLabel = gender === 'Women' ? 'bust' : 'chest';
+
   const matrixContent = (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {comparisonData.map((row, idx) => (
-        <div key={idx} className="relative rounded-[2rem] border border-neutral-800 bg-neutral-900/40 p-6 shadow-[0_0_30px_rgba(255,255,255,0.05)] overflow-hidden hover:border-neutral-700 transition-all duration-300">
-          
-          {/* Brand Header */}
-          <div className="flex items-center gap-4 mb-6 pb-4 border-b border-neutral-800/80">
-            {row.logoUrl ? (
-              <div className="h-12 w-12 rounded-xl bg-black/50 border border-white/5 p-2 flex items-center justify-center shadow-inner backdrop-blur-sm">
-                <img src={row.logoUrl} alt={row.brand} className="max-h-full max-w-full object-contain filter invert opacity-90" />
-              </div>
-            ) : (
-              <div className="h-12 w-12 rounded-xl bg-neutral-900 border border-neutral-700 text-neutral-300 font-bold flex items-center justify-center text-lg shadow-inner backdrop-blur-sm">
-                {row.brand.charAt(0)}
-              </div>
-            )}
-            <h3 className="font-extrabold text-white text-xl tracking-tight">{row.brand}</h3>
-          </div>
-
-          {/* Regular vs Oversized Bento Grid */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Regular Tile */}
-            <div className="flex flex-col rounded-2xl bg-black/40 p-4 border border-neutral-800/80">
-              <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2">Regular Fit</span>
-              <span className="text-3xl font-black text-white font-sans tracking-tight">{row.regular.recommendedSize}</span>
-              <div className="mt-3">
-                <span className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold bg-white/10 text-white border border-white/20">
-                  {row.regular.confidence}% Match
-                </span>
-              </div>
-              <span className="text-[9px] text-neutral-600 font-mono mt-3 uppercase">Length: {row.regular.maxVal ? `${row.regular.maxVal}cm` : 'N/A'}</span>
-            </div>
-
-            {/* Oversized Tile */}
-            <div className="flex flex-col rounded-2xl bg-black/40 p-4 border border-neutral-800/80">
-              <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2">Oversized Fit</span>
-              <span className="text-3xl font-black text-white font-sans tracking-tight">{row.oversized.recommendedSize}</span>
-              <div className="mt-3">
-                <span className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold bg-white/10 text-white border border-white/20">
-                  {row.oversized.confidence}% Match
-                </span>
-              </div>
-              <span className="text-[9px] text-neutral-600 font-mono mt-3 uppercase">Length: {row.oversized.maxVal ? `${row.oversized.maxVal}cm` : 'N/A'}</span>
-            </div>
-          </div>
-          
-        </div>
-      ))}
+    <div className="overflow-x-auto rounded-2xl border border-neutral-800 bg-neutral-900/40 shadow-[0_0_30px_rgba(255,255,255,0.04)]">
+      <table className="w-full text-sm min-w-[640px]">
+        <thead>
+          <tr className="text-neutral-500 text-[11px] uppercase tracking-widest border-b border-neutral-800">
+            <th className="text-left font-semibold px-5 py-4">Brand</th>
+            <th className="text-center font-semibold px-5 py-4">Regular fit</th>
+            <th className="text-center font-semibold px-5 py-4">Oversized fit</th>
+            <th className="text-right font-semibold px-5 py-4">{measureLabel} range (Reg.)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {comparisonData.map((row, idx) => (
+            <tr key={idx} className="border-b border-neutral-800/60 hover:bg-white/[0.02] transition-colors">
+              <td className="px-5 py-4">
+                <div className="flex items-center gap-3">
+                  {row.logoUrl ? (
+                    <div className="h-9 w-9 rounded-lg bg-black/50 border border-white/5 p-1.5 flex items-center justify-center">
+                      <img src={row.logoUrl} alt={row.brand} className="max-h-full max-w-full object-contain filter invert opacity-90" />
+                    </div>
+                  ) : (
+                    <div className="h-9 w-9 rounded-lg bg-neutral-900 border border-neutral-700 text-neutral-300 font-bold flex items-center justify-center">
+                      {row.brand.charAt(0)}
+                    </div>
+                  )}
+                  <span className="font-bold text-white">{row.brand}</span>
+                </div>
+              </td>
+              <td className="px-5 py-4 text-center">
+                <span className="text-xl font-black text-white">{row.regular.recommendedSize}</span>
+                <span className="block text-[10px] text-neutral-500 mt-0.5">{row.regular.confidence}% match</span>
+              </td>
+              <td className="px-5 py-4 text-center">
+                <span className="text-xl font-black text-white">{row.oversized.recommendedSize}</span>
+                <span className="block text-[10px] text-neutral-500 mt-0.5">{row.oversized.confidence}% match</span>
+              </td>
+              <td className="px-5 py-4 text-right text-neutral-300 tabular-nums">
+                {row.regular.minVal}–{row.regular.maxVal} cm
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 
@@ -123,6 +121,9 @@ export default function Comparison() {
             Compare sizing curves, chest bounds, and length parameters across all brands simultaneously.
           </p>
         </div>
+
+        {/* Tabular measurements summary */}
+        <MeasurementsTable profile={bodyProfile} gender={gender} />
 
         {/* LOADING STATE */}
         {loading ? (
