@@ -42,7 +42,7 @@ export default function BrandDetail() {
         <p className="text-xs text-slate-500 max-w-sm mb-6">
           Please capture measurements before viewing detail charts.
         </p>
-        <button onClick={() => navigate('/height-input')} className="rounded-xl bg-indigo-600 text-white px-6 py-3 cursor-pointer">
+        <button onClick={() => navigate('/height-input')} className="rounded-xl bg-white text-black hover:bg-neutral-200 px-6 py-3 cursor-pointer">
           Scan Now
         </button>
       </div>
@@ -52,7 +52,7 @@ export default function BrandDetail() {
   if (loading) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500/25 border-t-indigo-500" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-white/20 border-t-white" />
       </div>
     );
   }
@@ -65,7 +65,7 @@ export default function BrandDetail() {
         <p className="text-xs text-slate-500 max-w-sm mb-6">
           The requested size configuration chart for {brandName} was not resolved.
         </p>
-        <Link to="/brands" className="text-xs font-bold text-indigo-400 underline">
+        <Link to="/brands" className="text-xs font-bold text-white underline">
           Return to Grid
         </Link>
       </div>
@@ -109,7 +109,7 @@ export default function BrandDetail() {
                 <img src={brand.logoUrl} alt={brand.brand} className="max-h-full max-w-full object-contain filter invert opacity-80" />
               </div>
             ) : (
-              <div className="h-14 w-14 rounded-2xl bg-indigo-950 border border-indigo-800/40 text-indigo-400 font-black flex items-center justify-center text-xl">
+              <div className="h-14 w-14 rounded-2xl bg-neutral-900 border border-neutral-700 text-neutral-300 font-black flex items-center justify-center text-xl">
                 {brand.brand.charAt(0)}
               </div>
             )}
@@ -130,9 +130,7 @@ export default function BrandDetail() {
             </div>
             <div>
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Match Rating</span>
-              <span className={`text-base font-bold flex items-center gap-1 mt-1 ${
-                matchResult.confidence >= 85 ? 'text-emerald-400' : matchResult.confidence >= 70 ? 'text-amber-400' : 'text-indigo-400'
-              }`}>
+              <span className="text-base font-bold flex items-center gap-1 mt-1 text-white">
                 {matchResult.confidence}%
               </span>
             </div>
@@ -142,7 +140,7 @@ export default function BrandDetail() {
         {/* 2. VISUAL GRAPH: SIZE BAR RULER */}
         <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6 md:p-8 shadow-xl backdrop-blur-sm">
           <div className="flex items-center gap-3 mb-6">
-            <div className="rounded-xl bg-indigo-950/60 border border-indigo-800/40 p-2 text-indigo-400">
+            <div className="rounded-xl bg-white/10 border border-white/20 p-2 text-white">
               <Activity className="h-4.5 w-4.5" />
             </div>
             <div>
@@ -163,7 +161,7 @@ export default function BrandDetail() {
         {/* 3. EXPLAINER TEXT CARD */}
         <div className="rounded-3xl border border-slate-900 bg-slate-950 p-6 md:p-8 shadow-xl space-y-4">
           <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-            <Sparkles className="h-4.5 w-4.5 text-indigo-400 fill-indigo-400/10" />
+            <Sparkles className="h-4.5 w-4.5 text-white fill-white/10" />
             <span>Fit Translation Explanation</span>
           </h3>
           
@@ -172,11 +170,11 @@ export default function BrandDetail() {
           </p>
 
           {matchResult.isBorderline && (
-            <div className="flex items-start gap-3 rounded-2xl bg-amber-950/20 border border-amber-900/30 p-4 mt-4">
-              <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 rounded-2xl bg-neutral-900/50 border border-neutral-700 p-4 mt-4">
+              <AlertCircle className="h-5 w-5 text-neutral-400 flex-shrink-0 mt-0.5" />
               <div>
                 <h4 className="text-xs font-bold text-white uppercase tracking-wider">Boundary Alert</h4>
-                <p className="text-[11px] text-amber-300 mt-1 leading-relaxed">
+                <p className="text-[11px] text-neutral-300 mt-1 leading-relaxed">
                   {matchResult.borderlineMessage}
                 </p>
               </div>
@@ -198,7 +196,7 @@ export default function BrandDetail() {
                     key={size} 
                     className={`rounded-2xl border p-4 text-center ${
                       isSelected 
-                        ? 'border-indigo-500 bg-indigo-950/10' 
+                        ? 'border-white bg-white/10' 
                         : 'border-slate-900 bg-slate-950'
                     }`}
                   >
