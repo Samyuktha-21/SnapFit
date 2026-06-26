@@ -42,7 +42,7 @@ export default function Auth() {
   return (
     <div className="relative min-h-[85vh] flex items-center justify-center py-12 px-6">
       {/* Background glow circle */}
-      <div className="absolute top-[30%] left-[35%] h-[350px] w-[350px] rounded-full bg-indigo-500/10 blur-3xl pointer-events-none -z-10" />
+      <div className="absolute top-[30%] left-[35%] h-[350px] w-[350px] rounded-full bg-white/5 blur-3xl pointer-events-none -z-10" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -52,7 +52,7 @@ export default function Auth() {
       >
         {/* Brand Icon and Header */}
         <div className="flex flex-col items-center mb-8">
-          <div className="rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 p-3 text-white shadow-lg shadow-indigo-500/20 mb-3">
+          <div className="rounded-2xl bg-white p-3 text-black shadow-lg shadow-white/10 mb-3">
             <Shirt className="h-6 w-6" />
           </div>
           <h2 className="text-2xl font-black text-white tracking-tight">
@@ -102,7 +102,7 @@ export default function Auth() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-xl border border-slate-800 bg-slate-950 pl-11 pr-4 py-3 text-sm text-white placeholder-slate-650 focus:border-indigo-500/80 focus:ring-1 focus:ring-indigo-500/30 focus:outline-none"
+                className="w-full rounded-xl border border-slate-800 bg-slate-950 pl-11 pr-4 py-3 text-sm text-white placeholder-slate-650 focus:border-white focus:ring-1 focus:ring-white/30 focus:outline-none"
               />
             </div>
           </div>
@@ -118,7 +118,7 @@ export default function Auth() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-slate-800 bg-slate-950 pl-11 pr-4 py-3 text-sm text-white placeholder-slate-650 focus:border-indigo-500/80 focus:ring-1 focus:ring-indigo-500/30 focus:outline-none"
+                className="w-full rounded-xl border border-slate-800 bg-slate-950 pl-11 pr-4 py-3 text-sm text-white placeholder-slate-650 focus:border-white focus:ring-1 focus:ring-white/30 focus:outline-none"
               />
             </div>
           </div>
@@ -137,7 +137,7 @@ export default function Auth() {
                   onClick={() => setGender('Men')}
                   className={`py-3 rounded-xl border text-sm font-semibold transition-all duration-200 cursor-pointer ${
                     gender === 'Men'
-                      ? 'border-indigo-500 bg-indigo-950/20 text-indigo-300'
+                      ? 'border-white bg-white/10 text-white'
                       : 'border-slate-800 bg-slate-950 text-slate-450 hover:border-slate-700'
                   }`}
                 >
@@ -148,7 +148,7 @@ export default function Auth() {
                   onClick={() => setGender('Women')}
                   className={`py-3 rounded-xl border text-sm font-semibold transition-all duration-200 cursor-pointer ${
                     gender === 'Women'
-                      ? 'border-indigo-500 bg-indigo-950/20 text-indigo-300'
+                      ? 'border-white bg-white/10 text-white'
                       : 'border-slate-800 bg-slate-950 text-slate-450 hover:border-slate-700'
                   }`}
                 >
@@ -162,7 +162,7 @@ export default function Auth() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-4 flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm py-3.5 shadow-lg shadow-indigo-600/10 transition-all cursor-pointer disabled:opacity-40"
+            className="w-full mt-4 flex items-center justify-center gap-1.5 rounded-xl bg-white hover:bg-neutral-200 text-black font-bold text-sm py-3.5 shadow-lg shadow-white/10 transition-all cursor-pointer disabled:opacity-40"
           >
             {loading ? 'Authenticating...' : isSignUp ? 'Create Fit Profile' : 'Access Dashboard'}
           </button>
