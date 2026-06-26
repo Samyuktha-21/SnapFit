@@ -93,8 +93,8 @@ export default function SilhouetteOverlay({ gender, isAligned }: SilhouetteOverl
         viewBox="0 0 1280 720"
         className={`w-full h-full object-cover transition-colors duration-500 ${
           isAligned 
-            ? 'text-emerald-500 drop-shadow-[0_0_15px_rgba(16,185,129,0.4)]' 
-            : 'text-indigo-500/50 drop-shadow-[0_0_10px_rgba(99,102,241,0.2)]'
+            ? 'text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]' 
+            : 'text-neutral-500/50 drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]'
         }`}
       >
         {silhouettePath}
@@ -105,14 +105,14 @@ export default function SilhouetteOverlay({ gender, isAligned }: SilhouetteOverl
           cx="640" 
           cy="150" 
           r="8" 
-          className={`fill-transparent stroke-2 ${isAligned ? 'stroke-emerald-400 fill-emerald-500/10' : 'stroke-indigo-400/40'}`} 
+          className={`fill-transparent stroke-2 ${isAligned ? 'stroke-white fill-white/10' : 'stroke-neutral-400/40'}`} 
         />
         {/* Chest Center Target */}
         <circle 
           cx="640" 
           cy="280" 
           r="6" 
-          className={`fill-transparent stroke-2 ${isAligned ? 'stroke-emerald-400 fill-emerald-500/10' : 'stroke-indigo-400/30'}`} 
+          className={`fill-transparent stroke-2 ${isAligned ? 'stroke-white fill-white/10' : 'stroke-neutral-400/30'}`} 
         />
         {/* Feet base indicator */}
         <ellipse 
@@ -120,7 +120,7 @@ export default function SilhouetteOverlay({ gender, isAligned }: SilhouetteOverl
           cy="650" 
           rx="60" 
           ry="15" 
-          className={`fill-none stroke-2 ${isAligned ? 'stroke-emerald-400' : 'stroke-indigo-500/30'} stroke-dasharray-[4,4]`} 
+          className={`fill-none stroke-2 ${isAligned ? 'stroke-white' : 'stroke-neutral-500/30'} stroke-dasharray-[4,4]`} 
         />
 
         {/* Alignment instructions text inside overlay */}
@@ -130,13 +130,13 @@ export default function SilhouetteOverlay({ gender, isAligned }: SilhouetteOverl
           width="400" 
           height="45" 
           rx="12" 
-          className={`fill-slate-950/80 stroke transition-all duration-300 ${isAligned ? 'stroke-emerald-500/40' : 'stroke-slate-800'}`}
+          className={`fill-black/80 stroke transition-all duration-300 ${isAligned ? 'stroke-white/40' : 'stroke-neutral-800'}`}
         />
         <text 
           x="640" 
           y="48" 
           textAnchor="middle" 
-          className={`text-sm font-bold tracking-wider font-sans transition-colors ${isAligned ? 'fill-emerald-400' : 'fill-indigo-300/80'}`}
+          className={`text-sm font-bold tracking-wider font-sans transition-colors ${isAligned ? 'fill-white' : 'fill-neutral-400/80'}`}
         >
           {isAligned ? '✓ ALIGNMENT CORRECT' : 'POSITION BODY WITHIN THE OUTLINE'}
         </text>
