@@ -25,7 +25,6 @@ interface MeasurementState {
   setGender: (gender: 'Men' | 'Women') => void;
   setBodyProfile: (profile: BodyMeasurements | null) => void;
   setCapturedLandmarks: (landmarks: any | null) => void;
-  setPremium: (isPremium: boolean) => void;
   addCustomBrand: (brand: BrandData) => void;
   loginUser: (email: string, gender: 'Men' | 'Women') => void;
   logoutUser: () => void;
@@ -108,16 +107,6 @@ export const useMeasurementStore = create<MeasurementState>((set) => {
     
     setCapturedLandmarks: (capturedLandmarks) => set({ capturedLandmarks }),
     
-    setPremium: (isPremium) => {
-      set((state) => {
-        const updatedUser = state.user ? { ...state.user, is_premium: isPremium } : null;
-        if (updatedUser) {
-          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updatedUser));
-        }
-        return { user: updatedUser };
-      });
-    },
-    
     addCustomBrand: (brand) => {
       set((state) => {
         const updatedBrands = [...state.customBrands, brand];
@@ -132,7 +121,6 @@ export const useMeasurementStore = create<MeasurementState>((set) => {
         email,
         gender,
         height_cm: 175,
-        is_premium: false,
         scan_history: []
       };
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(mockUser));

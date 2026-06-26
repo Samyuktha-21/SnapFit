@@ -34,7 +34,6 @@ export const firebaseAuth = {
           email,
           gender,
           height_cm: height,
-          is_premium: false,
           scan_history: []
         };
         
@@ -63,7 +62,6 @@ export const firebaseAuth = {
             email,
             gender: 'Men',
             height_cm: 175,
-            is_premium: false,
             scan_history: []
           };
           users[user_id] = newUser;
@@ -89,7 +87,6 @@ export const firebaseAuth = {
             email,
             gender: 'Men',
             height_cm: 180,
-            is_premium: false,
             scan_history: []
           };
           users[user_id] = existingUser;

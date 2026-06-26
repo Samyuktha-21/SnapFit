@@ -28,6 +28,5 @@ export interface UserProfile {
   waist_cm?: number;
   hip_cm?: number;
   confidence?: number;
-  is_premium: boolean;
   scan_history: ScanHistoryItem[];
 }
