@@ -15,7 +15,6 @@ export default function Capture() {
     stream,
     active,
     error,
-    isInitializing,
     isSimulated,
     startCamera,
     stopCamera,
@@ -115,7 +114,7 @@ export default function Capture() {
           />
           
           {/* Action trigger button */}
-          <div className="flex justify-center py-4 bg-slate-950 rounded-3xl border border-slate-900 shadow">
+          <div className="flex justify-center py-4 bg-black rounded-3xl border border-neutral-800 shadow-[0_0_30px_rgba(255,255,255,0.05)]">
             <CaptureButton
               onClick={handleCaptureTrigger}
               countdown={countdown}

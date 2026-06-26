@@ -63,7 +63,7 @@ export default function Processing() {
       {/* Progress tracker */}
       <ProgressIndicator currentStep={2} />
 
-      <div className="w-full max-w-xl mx-auto rounded-3xl border border-slate-900 bg-slate-950/75 backdrop-blur px-8 py-16 text-center shadow-2xl mt-12">
+      <div className="w-full max-w-xl mx-auto rounded-3xl border border-neutral-800 bg-neutral-900/40 backdrop-blur px-8 py-16 text-center shadow-[0_0_30px_rgba(255,255,255,0.05)] mt-12">
         <LoadingSpinner />
         
         {/* Animated cycling text */}
@@ -75,14 +75,14 @@ export default function Processing() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.25 }}
-              className="text-sm font-semibold text-indigo-400 tracking-wide font-sans"
+              className="text-sm font-semibold text-white tracking-wide font-sans"
             >
               {statusList[statusIdx]}
             </motion.p>
           </AnimatePresence>
         </div>
 
-        <p className="text-xs text-slate-655 mt-4 leading-normal max-w-sm mx-auto">
+        <p className="text-xs text-neutral-500 mt-4 leading-normal max-w-sm mx-auto">
           Please wait. Scaling calculations run locally in the browser engine to secure your personal body data.
         </p>
       </div>
