@@ -84,13 +84,13 @@ const GridMotion: FC<GridMotionProps> = ({ items = [], gradientColor = 'black' }
             <div
               key={rowIndex}
               className="grid gap-4 w-full"
-              style={{ gridTemplateColumns: 'repeat(21, 1fr)', willChange: 'transform' }}
+              style={{ gridTemplateColumns: 'repeat(24, 1fr)', willChange: 'transform' }}
               ref={el => {
                 if (el) rowRefs.current[rowIndex] = el;
               }}
             >
-              {Array.from({ length: 21 }, (_, itemIndex) => {
-                const content = combinedItems[rowIndex * 7 + (itemIndex % 7)];
+              {Array.from({ length: 24 }, (_, itemIndex) => {
+                const content = combinedItems[rowIndex * 8 + (itemIndex % 8)];
                 return (
                   <div key={itemIndex} className="relative w-full aspect-square">
                     <div className="absolute inset-0 overflow-hidden rounded-[10px] bg-[#111] flex items-center justify-center text-white text-[1.5rem]">
