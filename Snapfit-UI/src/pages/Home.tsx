@@ -39,7 +39,7 @@ export default function Home() {
             {/* Subtitle removed per request */}
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 min-h-[80px] tracking-tight leading-tight drop-shadow-sm mb-6 w-full">
-              <span className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-100 whitespace-nowrap text-right">
+              <span className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-100 text-center sm:text-right">
                 Find your perfect fit.
               </span>
               <TextLoop
@@ -56,8 +56,8 @@ export default function Home() {
                   exit: { y: -20, rotateX: -90, opacity: 0, filter: 'blur(4px)' },
                 }}
               >
-                <span className="text-white block pb-1 whitespace-nowrap">Skip the guesswork.</span>
-                <span className="text-white block pb-1 whitespace-nowrap">Shop smarter.</span>
+                <span className="text-white block pb-1">Skip the guesswork.</span>
+                <span className="text-white block pb-1">Shop smarter.</span>
               </TextLoop>
             </div>
 

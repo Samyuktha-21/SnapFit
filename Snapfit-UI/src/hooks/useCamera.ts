@@ -6,7 +6,7 @@ export interface UseCameraResult {
   error: string | null;
   isInitializing: boolean;
   isSimulated: boolean;
-  startCamera: (facingMode?: 'user' | 'environment') => Promise<void>;
+  startCamera: (deviceId?: string) => Promise<void>;
   stopCamera: () => void;
   capturePhoto: () => Promise<string>;
 }
@@ -30,7 +30,7 @@ export function useCamera(): UseCameraResult {
     setIsSimulated(false);
   }, []);
 
-  const startCamera = useCallback(async (facingMode: 'user' | 'environment' = 'user') => {
+  const startCamera = useCallback(async (deviceId?: string) => {
     setIsInitializing(true);
     setError(null);
     setIsSimulated(false);
@@ -45,12 +45,19 @@ export function useCamera(): UseCameraResult {
         throw new Error('Camera APIs are not supported in this browser environment.');
       }
 
+      const videoConstraints: MediaTrackConstraints = {
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      };
+
+      if (deviceId) {
+        videoConstraints.deviceId = { exact: deviceId };
+      } else {
+        videoConstraints.facingMode = 'user';
+      }
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: facingMode
-        },
+        video: videoConstraints,
         audio: false
       });
 
