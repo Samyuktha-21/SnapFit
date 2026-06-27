@@ -6,7 +6,7 @@ export interface UseCameraResult {
   error: string | null;
   isInitializing: boolean;
   isSimulated: boolean;
-  startCamera: () => Promise<void>;
+  startCamera: (facingMode?: 'user' | 'environment') => Promise<void>;
   stopCamera: () => void;
   capturePhoto: () => Promise<string>;
 }
@@ -30,7 +30,7 @@ export function useCamera(): UseCameraResult {
     setIsSimulated(false);
   }, []);
 
-  const startCamera = useCallback(async () => {
+  const startCamera = useCallback(async (facingMode: 'user' | 'environment' = 'user') => {
     setIsInitializing(true);
     setError(null);
     setIsSimulated(false);
@@ -49,7 +49,7 @@ export function useCamera(): UseCameraResult {
         video: {
           width: { ideal: 1280 },
           height: { ideal: 720 },
-          facingMode: 'user'
+          facingMode: facingMode
         },
         audio: false
       });
