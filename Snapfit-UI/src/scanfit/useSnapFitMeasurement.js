@@ -85,7 +85,7 @@ export function useSnapFitMeasurement() {
 
         const videoOpts = currentDeviceId
           ? { deviceId: { exact: currentDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
-          : { facingMode: { ideal: 'user' }, width: { ideal: 1280 }, height: { ideal: 720 } };
+          : { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } };
 
         stream = await navigator.mediaDevices.getUserMedia({ video: videoOpts });
         if (videoRef.current) videoRef.current.srcObject = stream;
