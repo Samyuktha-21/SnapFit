@@ -11,7 +11,7 @@ const GridMotion: FC<GridMotionProps> = ({ items = [], gradientColor = 'black' }
   const gridRef = useRef<HTMLDivElement>(null);
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  const totalItems = 28;
+  const totalItems = 42;
   const defaultItems = Array.from({ length: totalItems }, (_, index) => `Item ${index + 1}`);
   const combinedItems = items.length > 0 ? items.slice(0, totalItems) : defaultItems;
 
@@ -79,8 +79,8 @@ const GridMotion: FC<GridMotionProps> = ({ items = [], gradientColor = 'black' }
         }}
       >
         <div className="absolute inset-0 pointer-events-none z-[4] bg-[length:250px]"></div>
-        <div className="gap-4 flex-none relative w-[400vw] md:w-[450vw] grid grid-rows-4 grid-cols-1 rotate-[-15deg] origin-center z-[2]">
-          {Array.from({ length: 4 }, (_, rowIndex) => (
+        <div className="gap-4 flex-none relative w-[600vw] md:w-[450vw] grid grid-rows-6 grid-cols-1 rotate-[-15deg] origin-center z-[2]">
+          {Array.from({ length: 6 }, (_, rowIndex) => (
             <div
               key={rowIndex}
               className="grid gap-4 w-full"
