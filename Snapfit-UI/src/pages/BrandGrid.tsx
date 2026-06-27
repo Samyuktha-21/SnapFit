@@ -139,7 +139,7 @@ export default function BrandGrid() {
             ) : visibleBrands.map((brand, idx) => (
               <div
                 key={brand.id || `${brand.brand}_${idx}`}
-                className="snap-start shrink-0 w-[85vw] sm:w-[400px] md:w-[420px] h-[400px]"
+                className="snap-start shrink-0 w-[85vw] sm:w-[400px] md:w-[420px] flex"
               >
                 <BrandCard
                   brand={brand}
