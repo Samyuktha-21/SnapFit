@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Mail, X } from 'lucide-react';
@@ -92,7 +93,7 @@ export default function Footer() {
             text stays readable against the scrolling image grid behind the footer. */}
         <nav className="flex items-center justify-center gap-5 sm:gap-7 rounded-full bg-black/60 backdrop-blur-sm px-5 py-2.5 border border-white/10">
           <button onClick={() => setOpen('about')} className={linkClass}>About</button>
-          <button onClick={() => setOpen('contact')} className={linkClass}>Contact</button>
+          <Link to="/contact" className={linkClass}>Contact</Link>
           <button onClick={() => setOpen('disclaimer')} className={linkClass}>Disclaimer</button>
         </nav>
 
