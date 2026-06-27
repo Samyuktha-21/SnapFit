@@ -18,7 +18,12 @@ interface MeasurementState {
   
   // Stored profile (if scanned)
   bodyProfile: BodyMeasurements | null;
-  
+
+  // Scan session persistence — keeps the results screen visible after the user
+  // navigates away and back, until they leave the site or hit Rescan.
+  scanComplete: boolean;
+  silhouette: { bustW: number; waistW: number; hipW: number } | null;
+
   // Scan captures
   capturedLandmarks: any | null;
   
@@ -32,6 +37,8 @@ interface MeasurementState {
   setUnit: (unit: 'cm' | 'in') => void;
   setFitPref: (pref: FitPref) => void;
   setBodyProfile: (profile: BodyMeasurements | null) => void;
+  setScanComplete: (v: boolean) => void;
+  setSilhouette: (s: { bustW: number; waistW: number; hipW: number } | null) => void;
   setCapturedLandmarks: (landmarks: any | null) => void;
   addCustomBrand: (brand: BrandData) => void;
   loginUser: (email: string, gender: 'Men' | 'Women') => void;
@@ -46,6 +53,8 @@ const STORAGE_KEYS = {
   WEIGHT: 'snapfit_weight',
   GENDER: 'snapfit_gender',
   PROFILE: 'snapfit_profile',
+  SCAN_COMPLETE: 'snapfit_scan_complete',
+  SILHOUETTE: 'snapfit_silhouette',
   CUSTOM_BRANDS: 'snapfit_custom_brands',
   UNIT: 'snapfit_unit',
   FITPREF: 'snapfit_fitpref'
@@ -60,6 +69,8 @@ export const useMeasurementStore = create<MeasurementState>((set) => {
   const savedGender = localStorage.getItem(STORAGE_KEYS.GENDER) as 'Men' | 'Women' | null;
   const savedProfileJson = localStorage.getItem(STORAGE_KEYS.PROFILE);
   const savedProfile = savedProfileJson ? JSON.parse(savedProfileJson) : null;
+  const savedSilhouetteJson = localStorage.getItem(STORAGE_KEYS.SILHOUETTE);
+  const savedSilhouette = savedSilhouetteJson ? JSON.parse(savedSilhouetteJson) : null;
   const savedCustomBrandsJson = localStorage.getItem(STORAGE_KEYS.CUSTOM_BRANDS);
   const savedCustomBrands = savedCustomBrandsJson ? JSON.parse(savedCustomBrandsJson) : [];
 
@@ -72,6 +83,10 @@ export const useMeasurementStore = create<MeasurementState>((set) => {
     unit: (localStorage.getItem(STORAGE_KEYS.UNIT) as 'cm' | 'in') || 'cm',
     fitPref: (localStorage.getItem(STORAGE_KEYS.FITPREF) as FitPref) || 'True',
     bodyProfile: savedProfile,
+    // Session-scoped: stays through in-site navigation + refresh, but clears
+    // once the user leaves the site (closes the tab), as requested.
+    scanComplete: sessionStorage.getItem(STORAGE_KEYS.SCAN_COMPLETE) === 'true',
+    silhouette: savedSilhouette,
     capturedLandmarks: null,
     customBrands: savedCustomBrands,
     
@@ -139,6 +154,20 @@ export const useMeasurementStore = create<MeasurementState>((set) => {
       });
     },
     
+    setScanComplete: (scanComplete) => {
+      sessionStorage.setItem(STORAGE_KEYS.SCAN_COMPLETE, scanComplete ? 'true' : 'false');
+      set({ scanComplete });
+    },
+
+    setSilhouette: (silhouette) => {
+      if (silhouette) {
+        localStorage.setItem(STORAGE_KEYS.SILHOUETTE, JSON.stringify(silhouette));
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.SILHOUETTE);
+      }
+      set({ silhouette });
+    },
+
     setCapturedLandmarks: (capturedLandmarks) => set({ capturedLandmarks }),
     
     addCustomBrand: (brand) => {
