@@ -8,6 +8,7 @@ import FitPrefToggle from '../components/FitPrefToggle';
 import UnitToggle from '../components/UnitToggle';
 import BrandCard from '../components/BrandCard';
 import MeasurementsTable from '../components/MeasurementsTable';
+import ManualEntryForm from '../components/ManualEntryForm';
 
 export default function BrandGrid() {
   const navigate = useNavigate();
@@ -20,6 +21,8 @@ export default function BrandGrid() {
   const visibleBrands = brands.filter((b) =>
     b.brand.toLowerCase().includes(query.trim().toLowerCase()),
   );
+
+  const [isEditingManual, setIsEditingManual] = useState(false);
 
   // Load all brands from Firestore/LocalStorage Database
   useEffect(() => {
@@ -40,7 +43,7 @@ export default function BrandGrid() {
   }, [gender]);
 
   // Render scan missing warning
-  if (!bodyProfile) {
+  if (!bodyProfile && !isEditingManual) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 text-center">
         <AlertCircle className="h-12 w-12 text-neutral-600 mb-4" />
@@ -48,12 +51,20 @@ export default function BrandGrid() {
         <p className="text-xs text-neutral-500 max-w-sm mb-6">
           We need your chest/bust measurements to compute brand sizing. Please capture a quick scan first.
         </p>
-        <button
-          onClick={() => navigate('/scanfit')}
-          className="rounded-xl bg-white hover:bg-neutral-200 text-black font-bold text-sm px-6 py-3 transition-colors cursor-pointer"
-        >
-          Measure Now
-        </button>
+        <div className="flex gap-4">
+          <button
+            onClick={() => navigate('/scanfit')}
+            className="rounded-xl bg-white hover:bg-neutral-200 text-black font-bold text-sm px-6 py-3 transition-colors cursor-pointer"
+          >
+            Measure Now
+          </button>
+          <button
+            onClick={() => setIsEditingManual(true)}
+            className="rounded-xl border border-neutral-700 hover:bg-neutral-800 text-white font-bold text-sm px-6 py-3 transition-colors cursor-pointer"
+          >
+            Enter Manually
+          </button>
+        </div>
       </div>
     );
   }
@@ -90,7 +101,22 @@ export default function BrandGrid() {
         </div>
 
         {/* Tabular measurements summary */}
-        <MeasurementsTable profile={bodyProfile} gender={gender} />
+        {isEditingManual ? (
+          <ManualEntryForm 
+            onCancel={() => setIsEditingManual(false)} 
+            onSave={() => setIsEditingManual(false)} 
+          />
+        ) : (
+          <div className="relative group">
+            <MeasurementsTable profile={bodyProfile} gender={gender} />
+            <button 
+              onClick={() => setIsEditingManual(true)}
+              className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+            >
+              Edit
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Brand Recommendations Carousel */}
