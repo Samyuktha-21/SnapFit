@@ -14,7 +14,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-  CheckCircle, ArrowRight, LayoutGrid, RotateCcw, Camera, Pencil, Download, ChevronDown, RefreshCcw
+  CheckCircle, ArrowRight, LayoutGrid, RotateCcw, Camera, Pencil, Download, ChevronDown, RefreshCcw, ZoomIn
 } from 'lucide-react';
 import { useMeasurementStore } from '../store/useMeasurementStore';
 import { useSnapFitMeasurement } from '../scanfit/useSnapFitMeasurement';
@@ -79,7 +79,7 @@ function ScanDetailsForm({ onContinue }) {
     'bg-black border border-neutral-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-accent transition-colors w-full';
 
   return (
-    <div className="min-h-screen bg-transparent md:bg-black text-white flex flex-col font-display relative">
+    <div className="min-h-[80vh] md:min-h-0 md:flex-1 bg-transparent md:bg-black text-white flex flex-col items-center justify-center font-display relative py-8">
       <div className="w-full max-w-md rounded-3xl border border-neutral-800 bg-neutral-900/40 p-7 md:p-8 shadow-xl">
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-white/10 text-white border border-white/20">
           <Camera className="h-3.5 w-3.5" /> Before we scan
@@ -156,6 +156,7 @@ function ScanDetailsForm({ onContinue }) {
 // ---------------------------------------------------------------------------
 function ScanCamera({ onComplete, onEditDetails }) {
   const [showToast, setShowToast] = useState(false);
+  const [zoom, setZoom] = useState(1);
   const {
     height, weight, gender,
     setBodyProfile, setSilhouette, setScanComplete,
@@ -210,8 +211,10 @@ function ScanCamera({ onComplete, onEditDetails }) {
           </div>
 
           <div className="flex-1 relative z-0 md:rounded-2xl overflow-hidden bg-black md:aspect-video group">
-            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-0 transition-transform duration-300 origin-center" style={{ transform: `scale(${zoom})` }}>
+              <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+              <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-cover" />
+            </div>
             
             <div className="absolute top-[10%] left-0 w-full flex justify-center pointer-events-none z-30 transition-opacity duration-300">
               <div className={`backdrop-blur-md px-6 py-3 rounded-full text-white font-bold text-base md:text-lg tracking-wide border shadow-2xl transition-all ${
@@ -227,6 +230,19 @@ function ScanCamera({ onComplete, onEditDetails }) {
               title="Switch Camera"
             >
               <RefreshCcw size={20} />
+            </button>
+
+            <button
+              onClick={() => setZoom(z => z === 1 ? 1.5 : z === 1.5 ? 2 : 1)}
+              className="absolute top-20 right-4 z-20 bg-white/10 hover:bg-white/20 backdrop-blur-md p-3 rounded-full border border-white/20 transition-all text-white"
+              title="Zoom"
+            >
+              <ZoomIn size={20} />
+              {zoom !== 1 && (
+                <span className="absolute -top-1 -right-1 bg-accent text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                  {zoom}x
+                </span>
+              )}
             </button>
           </div>
 
