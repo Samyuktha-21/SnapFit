@@ -41,6 +41,14 @@ export default function SizePassport({ profile, gender, bodyShape }: Props) {
 
   return (
     <div className="flex flex-col items-center gap-4">
+      <button
+        onClick={download}
+        disabled={busy}
+        className="flex items-center gap-2 rounded-xl bg-accent text-black font-bold text-sm px-5 py-3 hover:brightness-95 transition cursor-pointer disabled:opacity-60"
+      >
+        <Download className="h-4 w-4" /> {busy ? 'Preparing…' : 'Download Size Passport'}
+      </button>
+
       {/* Exported card */}
       <div
         ref={cardRef}
@@ -78,14 +86,6 @@ export default function SizePassport({ profile, gender, bodyShape }: Props) {
           </p>
         </div>
       </div>
-
-      <button
-        onClick={download}
-        disabled={busy}
-        className="flex items-center gap-2 rounded-xl bg-accent text-black font-bold text-sm px-5 py-3 hover:brightness-95 transition cursor-pointer disabled:opacity-60"
-      >
-        <Download className="h-4 w-4" /> {busy ? 'Preparing…' : 'Download Size Passport'}
-      </button>
     </div>
   );
 }
