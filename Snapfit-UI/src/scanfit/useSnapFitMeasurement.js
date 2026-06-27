@@ -19,6 +19,10 @@ export function useSnapFitMeasurement() {
   const canvasRef = useRef(null);
   const landmarkerRef = useRef(null);
 
+  // Camera switching states
+  const [devices, setDevices] = useState([]);
+  const [currentDeviceId, setCurrentDeviceId] = useState(null);
+
   // Per-frame mutable state (refs, so the 60fps loop never triggers re-renders).
   const phaseRef = useRef('front');
   const alignedSinceRef = useRef(null);
@@ -52,9 +56,32 @@ export function useSnapFitMeasurement() {
     goPhase('front');
   }, []);
 
-  // 1) Camera + model setup (runs once).
+  // Enumerate devices once
+  useEffect(() => {
+    async function getDevices() {
+      try {
+        const all = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = all.filter(d => d.kind === 'videoinput');
+        setDevices(videoInputs);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    getDevices();
+  }, []);
+
+  const switchCamera = useCallback(() => {
+    if (devices.length > 1) {
+      const idx = devices.findIndex(d => d.deviceId === currentDeviceId);
+      const nextIdx = (idx + 1) % devices.length;
+      setCurrentDeviceId(devices[nextIdx].deviceId);
+    }
+  }, [devices, currentDeviceId]);
+
+  // 1) Camera + model setup
   useEffect(() => {
     let cancelled = false;
+    let stream = null;
     async function init() {
       try {
         if (!navigator.mediaDevices?.getUserMedia) {
@@ -65,29 +92,34 @@ export function useSnapFitMeasurement() {
         // `ideal` (not `exact`) keeps this from throwing on devices that can't
         // satisfy it — desktops with one webcam just ignore facingMode, phones
         // pick the front/selfie camera which is what a self-scan wants.
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: 'user' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-        });
+        if (videoRef.current && videoRef.current.srcObject) {
+          videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+        }
+
+        const videoOpts = currentDeviceId
+          ? { deviceId: { exact: currentDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+          : { facingMode: { ideal: 'user' }, width: { ideal: 1280 }, height: { ideal: 720 } };
+
+        stream = await navigator.mediaDevices.getUserMedia({ video: videoOpts });
         if (videoRef.current) videoRef.current.srcObject = stream;
-        const vision = await FilesetResolver.forVisionTasks(
-          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm',
-        );
-        const lm = await PoseLandmarker.createFromOptions(vision, {
-          baseOptions: {
-            modelAssetPath:
-              'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
-            delegate: 'GPU',
-          },
-          runningMode: 'VIDEO',
-          numPoses: 1,
-          outputSegmentationMasks: true, // needed for Method A side-depth
-        });
-        if (cancelled) return;
-        landmarkerRef.current = lm;
+        
+        if (!landmarkerRef.current) {
+          const vision = await FilesetResolver.forVisionTasks(
+            'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm',
+          );
+          const lm = await PoseLandmarker.createFromOptions(vision, {
+            baseOptions: {
+              modelAssetPath:
+                'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
+              delegate: 'GPU',
+            },
+            runningMode: 'VIDEO',
+            numPoses: 1,
+            outputSegmentationMasks: true,
+          });
+          if (cancelled) return;
+          landmarkerRef.current = lm;
+        }
         setStatus('Ready');
       } catch (err) {
         // NotAllowedError = user (or iOS Safari's per-site setting) blocked the
@@ -104,8 +136,11 @@ export function useSnapFitMeasurement() {
       }
     }
     init();
-    return () => { cancelled = true; };
-  }, []);
+    return () => { 
+      cancelled = true; 
+      if (stream) stream.getTracks().forEach(t => t.stop()); 
+    };
+  }, [currentDeviceId]);
 
   // 2) Detection loop (runs once; reads phase from a ref to avoid stale closures).
   useEffect(() => {
@@ -231,6 +266,6 @@ export function useSnapFitMeasurement() {
   return {
     videoRef, canvasRef,
     phase, status, aligned, holdProgress, reasons, debug, result, silhouette, captureFlash,
-    reset,
+    reset, devices, switchCamera
   };
 }
