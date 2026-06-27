@@ -329,10 +329,7 @@ function ResultsView({ onRescan, onEditDetails }) {
 
         {/* RIGHT — measurements + actions + Size Passport dropdown */}
         <div className="rounded-3xl border border-neutral-800 bg-neutral-900/40 p-6 md:p-8 shadow-xl">
-          <h3 className="text-lg font-bold text-white tracking-tight">Your measurements</h3>
-          <p className="text-xs text-neutral-500 mt-1 mb-5">
-            Estimated from your height, weight &amp; sex with a model trained on 6,068 adults (ANSUR II).
-          </p>
+          <h3 className="text-lg font-bold text-white tracking-tight mb-5">Your measurements</h3>
 
           {profile ? (
             <>
@@ -381,8 +378,8 @@ function ResultsView({ onRescan, onEditDetails }) {
                 </button>
               </div>
 
-              {/* Size Passport — dropdown right below Compare (no scrolling) */}
-              <div className="relative mt-3">
+              {/* Size Passport — Inline Accordion */}
+              <div className="mt-3 w-full">
                 <button
                   onClick={() => setShowPassport((v) => !v)}
                   className="w-full flex items-center justify-center gap-2 rounded-xl border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 text-white font-bold text-sm py-3 transition-colors cursor-pointer"
@@ -391,28 +388,19 @@ function ResultsView({ onRescan, onEditDetails }) {
                   <ChevronDown className={`h-4 w-4 transition-transform ${showPassport ? 'rotate-180' : ''}`} />
                 </button>
 
-                <AnimatePresence>
+                <AnimatePresence initial={false}>
                   {showPassport && (
-                    <>
-                      {/* click-away */}
-                      <motion.div 
-                        className="fixed inset-0 z-40" 
-                        onClick={() => setShowPassport(false)}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                      />
-                      <motion.div 
-                        className="absolute right-0 z-50 mt-2 rounded-2xl border border-neutral-800 bg-neutral-950 p-4 shadow-2xl max-h-[72vh] overflow-auto origin-top"
-                        initial={{ opacity: 0, scaleY: 0.9, y: -10 }}
-                        animate={{ opacity: 1, scaleY: 1, y: 0 }}
-                        exit={{ opacity: 0, scaleY: 0.9, y: -10 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                      >
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="overflow-hidden w-full"
+                    >
+                      <div className="mt-4 rounded-2xl border border-neutral-800 bg-neutral-950 p-4 shadow-2xl mb-4">
                         <SizePassport profile={profile} gender={gender} bodyShape={bodyShape} />
-                      </motion.div>
-                    </>
+                      </div>
+                    </motion.div>
                   )}
                 </AnimatePresence>
               </div>
