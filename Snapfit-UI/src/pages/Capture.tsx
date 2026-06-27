@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { RefreshCcw } from 'lucide-react';
 import { useCamera } from '../hooks/useCamera';
 import { useMeasurementStore } from '../store/useMeasurementStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,12 +25,17 @@ export default function Capture() {
   const [isAligned, setIsAligned] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [triggerFlash, setTriggerFlash] = useState(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
 
-  // Initialize camera stream on mount
+  const toggleCamera = () => {
+    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+  };
+
+  // Initialize camera stream on mount and when facingMode changes
   useEffect(() => {
-    startCamera();
+    startCamera(facingMode);
     return () => stopCamera();
-  }, [startCamera, stopCamera]);
+  }, [facingMode, startCamera, stopCamera]);
 
   const handleCaptureTrigger = () => {
     if (countdown !== null) return;
@@ -114,13 +120,21 @@ export default function Capture() {
           />
           
           {/* Action trigger button */}
-          <div className="flex justify-center py-4 bg-black rounded-3xl border border-neutral-800 shadow-[0_0_30px_rgba(255,255,255,0.05)]">
+          <div className="flex justify-center gap-4 py-4 bg-black rounded-3xl border border-neutral-800 shadow-[0_0_30px_rgba(255,255,255,0.05)]">
             <CaptureButton
               onClick={handleCaptureTrigger}
               countdown={countdown}
               disabled={!active || countdown !== null}
               isAligned={isAligned}
             />
+            
+            <button
+              onClick={toggleCamera}
+              className="flex items-center justify-center p-4 rounded-full bg-neutral-900 border border-neutral-700 text-white hover:bg-neutral-800 transition-colors"
+              title="Switch Camera"
+            >
+              <RefreshCcw className="w-6 h-6" />
+            </button>
           </div>
         </div>
 
