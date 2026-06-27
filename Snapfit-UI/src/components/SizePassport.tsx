@@ -8,11 +8,12 @@ import { fmtVal } from '../utils/units';
 interface Props {
   profile: BodyMeasurements;
   gender: 'Men' | 'Women';
+  bodyShape?: { label: string; confidence: number } | null;
 }
 
 // An attractive, shareable size card the user can download as a PNG and pull up
 // while shopping, or send to whoever is buying for them.
-export default function SizePassport({ profile, gender }: Props) {
+export default function SizePassport({ profile, gender, bodyShape }: Props) {
   const { unit } = useMeasurementStore();
   const cardRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
@@ -53,7 +54,15 @@ export default function SizePassport({ profile, gender }: Props) {
           </div>
 
           <span className="block text-[10px] uppercase tracking-widest text-neutral-500 mb-1">Recommended size</span>
-          <span className="font-display text-[5.5rem] text-accent leading-none">{profile.size}</span>
+          <div className="flex items-end justify-between">
+            <span className="font-display text-[5.5rem] text-accent leading-none">{profile.size}</span>
+            {bodyShape && (
+              <div className="text-right pb-2">
+                <span className="block text-[9px] uppercase tracking-widest text-neutral-500">Body type</span>
+                <span className="block text-base font-bold text-white leading-tight">{bodyShape.label}</span>
+              </div>
+            )}
+          </div>
 
           <div className="grid grid-cols-2 gap-3 mt-6">
             {rows.map(([label, cm]) => (

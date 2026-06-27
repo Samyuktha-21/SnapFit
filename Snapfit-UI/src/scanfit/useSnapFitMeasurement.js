@@ -34,6 +34,7 @@ export function useSnapFitMeasurement() {
   const [reasons, setReasons] = useState([]);
   const [debug, setDebug] = useState(null);   // live raw metrics (calibration)
   const [result, setResult] = useState(null); // { size, measurements, front, side }
+  const [silhouette, setSilhouette] = useState(null); // { bustW, waistW, hipW } from front mask — drives body-shape
   const [captureFlash, setCaptureFlash] = useState(null); // 'front' | 'side' — brief green "recorded" confirmation
 
   const goPhase = (p) => { phaseRef.current = p; setPhase(p); };
@@ -43,6 +44,7 @@ export function useSnapFitMeasurement() {
     sideRef.current = null;
     alignedSinceRef.current = null;
     setResult(null);
+    setSilhouette(null);
     setHoldProgress(0);
     setAligned(false);
     setReasons([]);
@@ -117,6 +119,7 @@ export function useSnapFitMeasurement() {
       setTimeout(() => setCaptureFlash(null), 1600);
       if (cur === 'front') {
         frontRef.current = metrics;
+        setSilhouette(metrics.silhouette || null);
         // Hip width A/B log: old landmark distance vs new mask-edge width, in the
         // same (frame px) units, so we can compare against real tape measurements
         // before fully switching the hip measurement over to the mask method.
@@ -227,7 +230,7 @@ export function useSnapFitMeasurement() {
 
   return {
     videoRef, canvasRef,
-    phase, status, aligned, holdProgress, reasons, debug, result, captureFlash,
+    phase, status, aligned, holdProgress, reasons, debug, result, silhouette, captureFlash,
     reset,
   };
 }

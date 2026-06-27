@@ -84,6 +84,118 @@ export function maskEdgeWidthAtY(maskData, maskW, maskH, yNorm, band = 0.03) {
   return found[Math.floor(found.length / 2)]; // median row
 }
 
+// Widest contiguous foreground run width at a single mask row (mask px), or 0.
+// Same "widest run" idea as maskEdgeWidthAtY so raised arms beside the torso
+// (separate blobs) don't get counted into the body width.
+function rowRunWidth(maskData, maskW, py) {
+  if (py < 0) return 0;
+  const base = py * maskW;
+  let best = 0, runStart = -1;
+  for (let x = 0; x < maskW; x++) {
+    const fg = maskData[base + x] > 0.5;
+    if (fg && runStart === -1) runStart = x;
+    if ((!fg || x === maskW - 1) && runStart !== -1) {
+      const end = fg ? x : x - 1;
+      best = Math.max(best, end - runStart + 1);
+      runStart = -1;
+    }
+  }
+  return best;
+}
+
+// Measure bust / waist / hip silhouette WIDTHS from the front mask. Body-shape
+// classification only needs RATIOS (which are scale-invariant — no depth/scale
+// needed), so we return raw mask-pixel widths and let the classifier divide.
+//   bust  = fullest width in the upper-torso band
+//   waist = narrowest width in the mid-torso band (the waist is, by definition,
+//           the narrowest part — far more reliable than guessing a y-row)
+//   hip   = fullest width around/just below the hip joints (true widest hip)
+export function measureFrontSilhouette(maskData, maskW, maskH, lm) {
+  const shoulderY = (lm[LM.L_SHOULDER].y + lm[LM.R_SHOULDER].y) / 2;
+  const hipY = (lm[LM.L_HIP].y + lm[LM.R_HIP].y) / 2;
+  const span = hipY - shoulderY;
+  if (span <= 0) return null;
+  const sample = (t) => rowRunWidth(maskData, maskW, Math.round((shoulderY + t * span) * maskH));
+
+  let bust = 0, waist = Infinity, hip = 0;
+  for (let t = 0.05; t <= 0.30 + 1e-9; t += 0.03) bust = Math.max(bust, sample(t));
+  for (let t = 0.35; t <= 0.75 + 1e-9; t += 0.03) { const wd = sample(t); if (wd) waist = Math.min(waist, wd); }
+  for (let t = 0.80; t <= 1.08 + 1e-9; t += 0.03) hip = Math.max(hip, sample(t));
+
+  if (!bust || !hip || !isFinite(waist)) return null;
+  return { bustW: bust, waistW: waist, hipW: hip };
+}
+
+const SHAPE_LABELS = {
+  hourglass: 'Hourglass',
+  pear: 'Pear',
+  invertedTriangle: 'Inverted Triangle',
+  rectangle: 'Rectangle',
+  apple: 'Apple',
+  trapezoid: 'Trapezoid',
+};
+
+const SHAPE_BLURB = {
+  hourglass: 'Bust and hips balanced with a defined waist.',
+  pear: 'Hips wider than the bust — weight sits lower.',
+  invertedTriangle: 'Bust/shoulders wider than the hips.',
+  rectangle: 'Bust, waist and hips run close to a straight line.',
+  apple: 'Fullest through the midsection.',
+  trapezoid: 'Shoulders wider than hips with a defined waist.',
+};
+
+// Classify body shape from front silhouette widths. Everything is a RATIO, so it
+// is scale-invariant and works without knowing real cm. `gender` only swaps a
+// couple of labels (men rarely read as "hourglass"). Returns a shape, a human
+// label/blurb, a confidence %, and the raw ratios for transparency.
+export function classifyBodyShape(sil, gender = 'Women') {
+  if (!sil) return null;
+  const { bustW: bust, waistW: waist, hipW: hip } = sil;
+  if (!bust || !waist || !hip) return null;
+
+  const bustHip = bust / hip;
+  const waistToHip = waist / hip;
+  const waistToBust = waist / bust;
+  const balance = Math.abs(bust - hip) / Math.max(bust, hip); // 0 => bust == hip
+  const isMen = gender === 'Men';
+
+  let key, confidence;
+  if (waist >= bust * 0.97 && waist >= hip * 0.97) {
+    // Midsection is the widest part.
+    key = 'apple';
+    confidence = 0.70 + (waist / Math.max(bust, hip) - 0.97) * 3;
+  } else if ((hip - bust) / hip > 0.07) {
+    key = 'pear';
+    confidence = 0.60 + ((hip - bust) / hip - 0.07) * 4;
+  } else if ((bust - hip) / bust > 0.07) {
+    key = isMen ? 'trapezoid' : 'invertedTriangle';
+    confidence = 0.60 + ((bust - hip) / bust - 0.07) * 4;
+  } else {
+    // Bust ≈ hip — the call comes down to how defined the waist is.
+    const waistDefined = waistToHip <= 0.78 && waistToBust <= 0.78;
+    if (waistDefined) {
+      key = isMen ? 'trapezoid' : 'hourglass';
+      confidence = 0.60 + (0.78 - Math.max(waistToHip, waistToBust)) * 3;
+    } else {
+      key = 'rectangle';
+      confidence = 0.62 + (0.07 - balance) * 2;
+    }
+  }
+  confidence = Math.round(Math.max(0.55, Math.min(0.95, confidence)) * 100);
+
+  return {
+    shape: key,
+    label: SHAPE_LABELS[key],
+    blurb: SHAPE_BLURB[key],
+    confidence,
+    ratios: {
+      bustHip: Math.round(bustHip * 100) / 100,
+      waistToHip: Math.round(waistToHip * 100) / 100,
+      waistToBust: Math.round(waistToBust * 100) / 100,
+    },
+  };
+}
+
 // FRONT-VIEW measurements (all pixels; the final `ratio` is scale-independent).
 // When a segmentation mask is supplied we ALSO compute a mask-edge hip width
 // (the reliable one); the landmark hip width is kept alongside it so the two can
@@ -100,15 +212,18 @@ export function extractFrontMetrics(lm, w, h, mask) {
   const ratio = pixelHeightPx ? shoulderWidthPx / pixelHeightPx : 0;
 
   // Mask-edge hip width, converted from mask px to frame px so it is directly
-  // comparable to the landmark-based hipWidthPx (same units).
+  // comparable to the landmark-based hipWidthPx (same units). We also pull the
+  // bust/waist/hip silhouette widths used for body-shape classification.
   let hipWidthMaskPx = null;
+  let silhouette = null;
   if (mask && mask.data) {
     const hipY = (lm[LM.L_HIP].y + lm[LM.R_HIP].y) / 2;
     const edge = maskEdgeWidthAtY(mask.data, mask.width, mask.height, hipY);
     if (edge) hipWidthMaskPx = edge.widthMaskPx * (w / mask.width);
+    silhouette = measureFrontSilhouette(mask.data, mask.width, mask.height, lm);
   }
 
-  return { shoulderWidthPx, hipWidthPx, hipWidthMaskPx, torsoLengthPx, pixelHeightPx, ratio };
+  return { shoulderWidthPx, hipWidthPx, hipWidthMaskPx, silhouette, torsoLengthPx, pixelHeightPx, ratio };
 }
 
 // In a side view, the body's horizontal silhouette width AT CHEST LEVEL *is* the
