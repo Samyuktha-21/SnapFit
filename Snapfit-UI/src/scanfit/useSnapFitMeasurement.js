@@ -55,7 +55,21 @@ export function useSnapFitMeasurement() {
     let cancelled = false;
     async function init() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (!navigator.mediaDevices?.getUserMedia) {
+          // Fires on insecure origins (http:// over a LAN IP) and old browsers —
+          // getUserMedia only exists in a secure context (https or localhost).
+          throw new Error('Camera needs HTTPS (or localhost). Open the site over https on your phone.');
+        }
+        // `ideal` (not `exact`) keeps this from throwing on devices that can't
+        // satisfy it — desktops with one webcam just ignore facingMode, phones
+        // pick the front/selfie camera which is what a self-scan wants.
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'user' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        });
         if (videoRef.current) videoRef.current.srcObject = stream;
         const vision = await FilesetResolver.forVisionTasks(
           'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm',
@@ -74,7 +88,17 @@ export function useSnapFitMeasurement() {
         landmarkerRef.current = lm;
         setStatus('Ready');
       } catch (err) {
-        setStatus('Camera/model error: ' + err.message);
+        // NotAllowedError = user (or iOS Safari's per-site setting) blocked the
+        // camera; NotFoundError = no camera; NotReadableError = another app holds it.
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setStatus('Camera blocked — allow camera access for this site, then reload.');
+        } else if (err.name === 'NotFoundError') {
+          setStatus('No camera found on this device.');
+        } else if (err.name === 'NotReadableError') {
+          setStatus('Camera is in use by another app. Close it and reload.');
+        } else {
+          setStatus('Camera/model error: ' + err.message);
+        }
       }
     }
     init();
@@ -93,9 +117,25 @@ export function useSnapFitMeasurement() {
       setTimeout(() => setCaptureFlash(null), 1600);
       if (cur === 'front') {
         frontRef.current = metrics;
+        // Hip width A/B log: old landmark distance vs new mask-edge width, in the
+        // same (frame px) units, so we can compare against real tape measurements
+        // before fully switching the hip measurement over to the mask method.
+        const lmHip = metrics.hipWidthPx;
+        const maskHip = metrics.hipWidthMaskPx;
+        console.log(
+          '[SnapFit hip][front] landmark=%spx  mask-edge=%spx  delta=%s',
+          lmHip != null ? lmHip.toFixed(1) : 'n/a',
+          maskHip != null ? maskHip.toFixed(1) : 'n/a',
+          lmHip != null && maskHip != null ? (maskHip - lmHip).toFixed(1) + 'px' : 'n/a',
+        );
         goPhase('side');
       } else if (cur === 'side') {
         sideRef.current = metrics;
+        // Independent side-view cross-check: front-to-back hip depth (mask edges).
+        console.log(
+          '[SnapFit hip][side] front-to-back depth (mask-edge)=%s',
+          metrics.hipDepthPx != null ? metrics.hipDepthPx.toFixed(1) + 'px' : 'n/a',
+        );
         const front = frontRef.current;
         const size = sizeFromRatio(front.ratio);
         setResult({
@@ -125,9 +165,12 @@ export function useSnapFitMeasurement() {
 
         // Copy the segmentation mask we need (side phase only), then close all
         // masks immediately — they hold GPU memory and leak if not released.
+        // We now need the mask on BOTH phases: side for torso depth, front for
+        // mask-edge hip width. Copy it out, then close all masks immediately
+        // (they hold GPU memory and leak if not released).
         let maskObj = null;
         if (res.segmentationMasks && res.segmentationMasks.length) {
-          if (cur === 'side') {
+          if (cur === 'front' || cur === 'side') {
             const m = res.segmentationMasks[0];
             maskObj = { data: m.getAsFloat32Array(), width: m.width, height: m.height };
           }
@@ -154,7 +197,7 @@ export function useSnapFitMeasurement() {
           (isFront ? drawFrontGuide : drawSideGuide)(ctx, canvas.width, canvas.height, check.aligned);
 
           const metrics = isFront
-            ? extractFrontMetrics(lm, canvas.width, canvas.height)
+            ? extractFrontMetrics(lm, canvas.width, canvas.height, maskObj)
             : extractSideMetrics(lm, canvas.width, canvas.height, maskObj);
 
           setAligned(check.aligned);

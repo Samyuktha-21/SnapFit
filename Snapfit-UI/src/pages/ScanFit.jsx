@@ -1,11 +1,16 @@
 // ScanFit.jsx — our real measurement model, mounted as the /scanfit page inside
-// the SnapFit frontend. Front + side guided capture, then height/weight/sex ->
-// ANSUR measurement estimate, written into the shared store so Brand Grid and
-// Comparison produce real results.
+// the SnapFit frontend.
+//
+// Flow:
+//   1. Details screen  — height (cm), weight (kg, optional), sex. Stored in the
+//      shared measurement store so scan + results + brand screens can read them.
+//      The camera does NOT start until height and sex are provided.
+//   2. Scan stage      — front + side guided capture (camera mounts here only).
+//   3. Results         — ANSUR measurement estimate from the stored details.
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, ArrowRight, LayoutGrid, RotateCcw } from 'lucide-react';
+import { CheckCircle, ArrowRight, LayoutGrid, RotateCcw, Camera, Pencil } from 'lucide-react';
 import { useMeasurementStore } from '../store/useMeasurementStore';
 import { useSnapFitMeasurement } from '../scanfit/useSnapFitMeasurement';
 import { predictMeasurements, cmToIn } from '../scanfit/bodyModel';
@@ -25,23 +30,144 @@ function sizeFromChest(chestCm, isMen) {
   return 'XL';
 }
 
-export default function ScanFit() {
+// ---------------------------------------------------------------------------
+// Step 1 — Details form (shown BEFORE the camera).
+// Local state while editing; commits to the shared store on "Start scan".
+// ---------------------------------------------------------------------------
+function ScanDetailsForm({ onContinue }) {
+  const { height, weight, gender, setHeight, setWeight, setGender } = useMeasurementStore();
+
+  // Seed from whatever is already in the store (so editing/returning is smooth).
+  const [heightCm, setHeightCm] = useState(height ? String(height) : '');
+  const [weightKg, setWeightKg] = useState(weight != null ? String(weight) : '');
+  // Sex starts unset so the user must make an explicit choice (it's a gate).
+  const [sex, setSex] = useState(
+    gender === 'Men' ? 'male' : gender === 'Women' ? 'female' : null,
+  );
+
+  const heightValid = Number(heightCm) > 0;
+  const canContinue = heightValid && (sex === 'male' || sex === 'female');
+
+  const handleStart = () => {
+    if (!canContinue) return;
+    setHeight(Number(heightCm));
+    setWeight(weightKg ? Number(weightKg) : null);
+    setGender(sex === 'male' ? 'Men' : 'Women');
+    onContinue();
+  };
+
+  const field =
+    'bg-black border border-neutral-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-accent transition-colors w-full';
+
+  return (
+    <div className="min-h-[85vh] py-10 px-4 flex items-start justify-center">
+      <div className="w-full max-w-md rounded-3xl border border-neutral-800 bg-neutral-900/40 p-7 md:p-8 shadow-xl">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-white/10 text-white border border-white/20">
+          <Camera className="h-3.5 w-3.5" /> Before we scan
+        </span>
+        <h2 className="mt-4 text-2xl font-black text-white tracking-tight">Tell us about you</h2>
+        <p className="mt-1.5 text-xs text-neutral-500 leading-relaxed">
+          We pair these with your scan to estimate your measurements. Height and sex
+          are required; weight sharpens the estimate but is optional.
+        </p>
+
+        <div className="mt-6 space-y-5">
+          {/* Height */}
+          <label className="block">
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">
+              Height (cm) <span className="text-accent">*</span>
+            </span>
+            <input
+              type="number"
+              inputMode="numeric"
+              value={heightCm}
+              placeholder="170"
+              onChange={(e) => setHeightCm(e.target.value)}
+              className={`mt-1.5 ${field}`}
+            />
+          </label>
+
+          {/* Weight (optional) */}
+          <label className="block">
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">
+              Weight (kg) <span className="text-neutral-600 normal-case tracking-normal">· optional</span>
+            </span>
+            <input
+              type="number"
+              inputMode="numeric"
+              value={weightKg}
+              placeholder="65"
+              onChange={(e) => setWeightKg(e.target.value)}
+              className={`mt-1.5 ${field}`}
+            />
+          </label>
+
+          {/* Sex toggle */}
+          <div>
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">
+              Sex <span className="text-accent">*</span>
+            </span>
+            <div className="mt-1.5 grid grid-cols-2 gap-2">
+              {[
+                { value: 'female', label: 'Female' },
+                { value: 'male', label: 'Male' },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setSex(opt.value)}
+                  className={`rounded-xl py-3 text-sm font-bold border transition-colors cursor-pointer ${
+                    sex === opt.value
+                      ? 'bg-accent text-black border-accent'
+                      : 'bg-black text-neutral-300 border-neutral-700 hover:border-neutral-500'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={handleStart}
+          disabled={!canContinue}
+          className="mt-7 w-full flex items-center justify-center gap-2 rounded-xl bg-accent text-black font-bold text-sm py-3.5 transition enabled:hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+        >
+          <Camera className="h-4 w-4" /> Start scan
+        </button>
+        {!canContinue && (
+          <p className="mt-3 text-center text-[11px] text-neutral-600">
+            Enter your height and pick your sex to continue.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Step 2 + 3 — Scan stage (camera) and results. The camera/model only spin up
+// when this component mounts, i.e. after the details form is completed.
+// ---------------------------------------------------------------------------
+function ScanStage({ onEditDetails }) {
   const navigate = useNavigate();
-  const { setHeight, setGender, setBodyProfile, addScanToHistory } = useMeasurementStore();
+  const {
+    height, weight, gender,
+    setBodyProfile, setWeight, addScanToHistory,
+  } = useMeasurementStore();
 
   const {
     videoRef, canvasRef,
-    phase, status, aligned, holdProgress, reasons, result, captureFlash,
+    phase, status, aligned, holdProgress, reasons, captureFlash,
     reset,
   } = useSnapFitMeasurement();
 
-  const [heightCm, setHeightCm] = useState('');
-  const [weightKg, setWeightKg] = useState('');
-  const [sex, setSex] = useState('female');
-  const predictions = predictMeasurements({ heightCm, weightKg, sex });
+  const sex = gender === 'Men' ? 'male' : 'female';
+  const isMen = gender === 'Men';
+  const predictions = predictMeasurements({ heightCm: height, weightKg: weight, sex });
 
   const buildProfile = () => {
-    const isMen = sex === 'male';
     const chest = Math.round(predictions.chest.cm);
     return {
       shoulderWidth: Math.round(predictions.shoulder.cm),
@@ -53,11 +179,8 @@ export default function ScanFit() {
     };
   };
 
-  // Persist to the shared store, then go to brand results.
   const saveAndGo = (dest) => {
     if (!predictions) return;
-    setHeight(Number(heightCm));
-    setGender(sex === 'male' ? 'Men' : 'Women');
     const profile = buildProfile();
     setBodyProfile(profile);
     addScanToHistory({
@@ -131,6 +254,19 @@ export default function ScanFit() {
               </p>
             </div>
           )}
+
+          {/* Entered details summary + edit */}
+          <div className="mt-4 flex items-center justify-between text-[11px] text-neutral-500 border-t border-neutral-800 pt-3">
+            <span>
+              {height} cm{weight != null ? ` · ${weight} kg` : ''} · {gender}
+            </span>
+            <button
+              onClick={onEditDetails}
+              className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer"
+            >
+              <Pencil className="h-3 w-3" /> Edit details
+            </button>
+          </div>
         </div>
 
         {/* RIGHT — tips while scanning, results when done */}
@@ -140,32 +276,8 @@ export default function ScanFit() {
           <div className="rounded-3xl border border-neutral-800 bg-neutral-900/40 p-6 md:p-8 shadow-xl">
             <h3 className="text-lg font-bold text-white tracking-tight">Your measurements</h3>
             <p className="text-xs text-neutral-500 mt-1 mb-5">
-              Enter your height &amp; weight — we estimate the rest from a model trained on 6,068 adults (ANSUR II).
+              Estimated from your height, weight &amp; sex with a model trained on 6,068 adults (ANSUR II).
             </p>
-
-            {/* Inputs */}
-            <div className="grid grid-cols-3 gap-3 mb-6">
-              <label className="flex flex-col gap-1 text-[11px] text-neutral-400">
-                Height (cm)
-                <input type="number" value={heightCm} placeholder="160"
-                  onChange={(e) => setHeightCm(e.target.value)}
-                  className="bg-black border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-neutral-500" />
-              </label>
-              <label className="flex flex-col gap-1 text-[11px] text-neutral-400">
-                Weight (kg)
-                <input type="number" value={weightKg} placeholder="55"
-                  onChange={(e) => setWeightKg(e.target.value)}
-                  className="bg-black border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-neutral-500" />
-              </label>
-              <label className="flex flex-col gap-1 text-[11px] text-neutral-400">
-                Sex
-                <select value={sex} onChange={(e) => setSex(e.target.value)}
-                  className="bg-black border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-neutral-500">
-                  <option value="female">Female</option>
-                  <option value="male">Male</option>
-                </select>
-              </label>
-            </div>
 
             {predictions ? (
               <>
@@ -216,11 +328,28 @@ export default function ScanFit() {
 
                 {/* Size Passport — shareable downloadable card */}
                 <div className="mt-8 pt-6 border-t border-neutral-800">
-                  <SizePassport profile={buildProfile()} gender={sex === 'male' ? 'Men' : 'Women'} />
+                  <SizePassport profile={buildProfile()} gender={gender} />
                 </div>
               </>
             ) : (
-              <p className="text-xs text-neutral-500">Enter your height &amp; weight to see your measurements.</p>
+              // Weight was skipped (it's optional) — the estimate needs it, so
+              // offer to add it here without re-asking for height/sex.
+              <div className="rounded-2xl border border-neutral-700 bg-black/40 p-5">
+                <p className="text-sm text-white font-semibold mb-1">Add your weight to finish</p>
+                <p className="text-[11px] text-neutral-500 mb-4">
+                  The measurement estimate needs your weight. Height and sex are already saved.
+                </p>
+                <label className="block text-[11px] text-neutral-400">
+                  Weight (kg)
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    placeholder="65"
+                    onChange={(e) => setWeight(e.target.value ? Number(e.target.value) : null)}
+                    className="mt-1.5 w-full bg-black border border-neutral-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-accent"
+                  />
+                </label>
+              </div>
             )}
 
             <button onClick={reset}
@@ -232,4 +361,18 @@ export default function ScanFit() {
       </div>
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Page shell — switches between the details form and the scan stage. Because
+// the scan stage is unmounted while on 'details', the camera never opens until
+// the user has supplied their details.
+// ---------------------------------------------------------------------------
+export default function ScanFit() {
+  const [step, setStep] = useState('details'); // 'details' | 'scan'
+
+  if (step === 'details') {
+    return <ScanDetailsForm onContinue={() => setStep('scan')} />;
+  }
+  return <ScanStage onEditDetails={() => setStep('details')} />;
 }
