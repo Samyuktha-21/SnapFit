@@ -21,7 +21,7 @@ export default function MeasurementsTable({ profile, gender }: Props) {
 
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-5 shadow-[0_0_30px_rgba(212,255,63,0.06)]">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 pr-12 md:pr-16">
         <h3 className="text-sm font-bold text-white">Your Measurements</h3>
         <span className="text-[11px] text-neutral-400">
           Size <span className="text-accent font-bold">{profile.size}</span> · {profile.confidence}% confidence

@@ -34,8 +34,16 @@ export default function BrandCard({ brand, gender, bodyProfile, fitPref }: Brand
       <div className="relative z-10 flex flex-col h-full">
         {/* Header */}
         <div className="flex items-center gap-3 mb-5">
-          <div className="h-12 w-12 rounded-2xl bg-neutral-900 border border-neutral-700 text-white font-display text-xl flex items-center justify-center">
-            {brand.brand.charAt(0)}
+          <div className="h-12 w-12 rounded-2xl bg-neutral-900 border border-neutral-700 text-white font-display text-xl flex items-center justify-center overflow-hidden">
+            <img 
+              src={brand.logoUrl || `/logos/${brand.brand.toLowerCase().replace(/[^a-z0-9]/g, '')}.png`} 
+              alt={brand.brand} 
+              className="w-full h-full object-contain p-2"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.parentElement!.innerHTML = brand.brand.charAt(0);
+              }}
+            />
           </div>
           <div>
             <h3 className="text-xl font-extrabold text-white tracking-tight">{brand.brand}</h3>
