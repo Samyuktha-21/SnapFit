@@ -192,10 +192,10 @@ function ScanCamera({ onComplete, onEditDetails }) {
     : aligned ? 'Perfect! Hold still...' : (reasons && reasons.length > 0 ? reasons[0] : 'Line up with the guide');
 
   return (
-    <div className="min-h-screen bg-black text-white p-0 md:p-6 flex flex-col">
-      <div className="mx-auto max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <div className="rounded-none md:rounded-3xl border-none md:border border-neutral-800 bg-neutral-900/40 p-5 shadow-xl relative">
-          <div className="flex items-center justify-between mb-4 z-10 relative">
+    <div className="fixed inset-0 z-50 bg-black text-white p-0 flex flex-col md:relative md:z-auto md:bg-transparent md:min-h-screen md:p-6">
+      <div className="flex-1 w-full flex flex-col md:grid md:grid-cols-2 md:gap-6 md:mx-auto md:max-w-6xl md:items-start">
+        <div className="flex-1 flex flex-col md:rounded-3xl md:border md:border-neutral-800 md:bg-neutral-900/40 md:p-5 md:shadow-xl md:relative">
+          <div className="flex items-center justify-between p-4 z-10 relative md:mb-4 md:p-0">
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${
               phase === 'done'
                 ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
@@ -209,7 +209,7 @@ function ScanCamera({ onComplete, onEditDetails }) {
             </span>
           </div>
 
-          <div className="fixed inset-0 z-0 md:relative md:rounded-2xl overflow-hidden bg-black md:aspect-video group">
+          <div className="flex-1 relative z-0 md:rounded-2xl overflow-hidden bg-black md:aspect-video group">
             <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
             <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-cover" />
             
@@ -228,7 +228,6 @@ function ScanCamera({ onComplete, onEditDetails }) {
             >
               <RefreshCcw size={20} />
             </button>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none md:hidden" />
           </div>
 
           <AnimatePresence>
@@ -254,7 +253,7 @@ function ScanCamera({ onComplete, onEditDetails }) {
           )}
 
           {phase !== 'done' && (
-            <div className="mt-4 relative z-10">
+            <div className="p-4 z-10 md:mt-4 md:p-0">
               <div className="h-1.5 rounded-full bg-neutral-800 overflow-hidden">
                 <div className="h-full bg-emerald-400 transition-[width] duration-100"
                   style={{ width: `${Math.round(holdProgress * 100)}%` }} />
@@ -272,7 +271,7 @@ function ScanCamera({ onComplete, onEditDetails }) {
             </div>
           )}
 
-          <div className="mt-4 relative z-10 flex items-center justify-between text-[11px] text-neutral-500 border-t border-neutral-800 pt-3">
+          <div className="hidden md:flex mt-4 relative z-10 items-center justify-between text-[11px] text-neutral-500 border-t border-neutral-800 pt-3">
             <span>{height} cm{weight != null ? ` · ${weight} kg` : ''} · {gender}</span>
             <button onClick={onEditDetails}
               className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
@@ -281,7 +280,9 @@ function ScanCamera({ onComplete, onEditDetails }) {
           </div>
         </div>
 
-        <TipsCard />
+        <div className="hidden md:block">
+          <TipsCard />
+        </div>
       </div>
     </div>
   );
