@@ -11,6 +11,7 @@
 //      hits Rescan.
 
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle, ArrowRight, LayoutGrid, RotateCcw, Camera, Pencil, Download, ChevronDown,
@@ -390,15 +391,30 @@ function ResultsView({ onRescan, onEditDetails }) {
                   <ChevronDown className={`h-4 w-4 transition-transform ${showPassport ? 'rotate-180' : ''}`} />
                 </button>
 
-                {showPassport && (
-                  <>
-                    {/* click-away */}
-                    <div className="fixed inset-0 z-40" onClick={() => setShowPassport(false)} />
-                    <div className="absolute right-0 z-50 mt-2 rounded-2xl border border-neutral-800 bg-neutral-950 p-4 shadow-2xl max-h-[72vh] overflow-auto">
-                      <SizePassport profile={profile} gender={gender} bodyShape={bodyShape} />
-                    </div>
-                  </>
-                )}
+                <AnimatePresence>
+                  {showPassport && (
+                    <>
+                      {/* click-away */}
+                      <motion.div 
+                        className="fixed inset-0 z-40" 
+                        onClick={() => setShowPassport(false)}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      />
+                      <motion.div 
+                        className="absolute right-0 z-50 mt-2 rounded-2xl border border-neutral-800 bg-neutral-950 p-4 shadow-2xl max-h-[72vh] overflow-auto origin-top"
+                        initial={{ opacity: 0, scaleY: 0.9, y: -10 }}
+                        animate={{ opacity: 1, scaleY: 1, y: 0 }}
+                        exit={{ opacity: 0, scaleY: 0.9, y: -10 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      >
+                        <SizePassport profile={profile} gender={gender} bodyShape={bodyShape} />
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
               </div>
 
               <p className="text-[11px] text-neutral-600 leading-relaxed mt-4">
