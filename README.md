@@ -6,6 +6,16 @@
 
 Clothing sizes aren't standardized. A Medium at one brand is a Large at another, and online shopping becomes a guessing game with a 30%+ return rate. SnapFit is a fitting room that lives in your camera.
 
+## Why it matters
+
+SnapFit was built to cut down the **exchanges and returns** that come from guessing your size online. Every returned garment is shipped back, re-handled, and often re-shipped or discarded. Reducing that means:
+
+- **Money saved** — fewer wasted orders and return-shipping fees for shoppers and stores.
+- **Energy and fuel saved** — far fewer parcels travelling back and forth.
+- **A lighter footprint** — less transport, packaging, and product waste.
+
+Getting the size right the first time is a small fix that adds up.
+
 ## What it does
 
 - **Guided two-angle scan.** A camera overlay guides you into a front and side pose with live alignment feedback, then auto-captures when you hold steady (green confirmation per angle).
@@ -17,9 +27,15 @@ Clothing sizes aren't standardized. A Medium at one brand is a Large at another,
 
 ## How it works
 
-1. **Pose detection** runs fully client-side with MediaPipe Tasks Vision (PoseLandmarker). It powers the guided capture experience.
-2. **Measurement model.** Body circumferences can't be truly measured from a single front photo (no depth, no scale), so SnapFit predicts them statistically from height + weight + sex using coefficients trained offline on the public ANSUR II dataset. Outputs are clearly labeled as estimates with their error.
-3. **Brand matching** compares your chest/bust against each brand's size ranges and returns the best size with a confidence score and borderline guidance.
+1. **Pose detection** runs fully client-side with MediaPipe Tasks Vision (PoseLandmarker), a deep-learning pose + body-segmentation model. It powers the guided capture experience and the body-silhouette analysis.
+2. **Measurement model (machine learning).** Body circumferences can't be truly measured from a single front photo (no depth, no scale), so SnapFit predicts them with a **machine-learning regression** trained on real anthropometric data. From height + weight + sex it estimates chest, waist, hip and shoulder, and every output is labelled as an estimate with the model's real average error.
+3. **Body type** (Hourglass / Pear / Rectangle / Inverted Triangle / Apple) is read from your front silhouette using the pose segmentation mask — based on proportions (ratios), which are scale-independent, so it works without exact measurements.
+4. **Brand matching** compares your chest/bust against each brand's size ranges and returns the best size with a confidence score and borderline guidance.
+
+## Data & machine learning
+
+- We **analysed body-measurement data with machine learning** to build the size estimator — a linear-regression model fit on real anthropometric measurements.
+- **Datasets** were sourced and evaluated from **Kaggle** (public body-measurement datasets) during development. The shipped model is trained on the public **ANSUR II** anthropometric dataset (6,068 adults); only the resulting coefficients ship to the browser — no dataset and no images are uploaded at runtime.
 
 ## Tech stack
 

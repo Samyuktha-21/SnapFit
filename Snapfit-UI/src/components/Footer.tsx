@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Mail, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
-type PanelKey = 'about' | 'contact' | 'disclaimer';
+type PanelKey = 'about' | 'disclaimer';
 
 const PANELS: Record<PanelKey, { title: string; body: ReactNode }> = {
   about: {
@@ -19,34 +19,18 @@ const PANELS: Record<PanelKey, { title: string; body: ReactNode }> = {
         <p>
           One quick scan reads your proportions, and our model translates them
           into the size that actually fits across the brands you shop. No measuring
-          tape, no second-guessing at checkout, far fewer returns.
+          tape, no second-guessing at checkout.
+        </p>
+        <p>
+          We built SnapFit to cut down the exchanges and returns that come with
+          guessing your size online. Fewer returns mean less money wasted, and far
+          less energy and fuel spent shipping clothes back and forth — a small fix
+          for your wardrobe that adds up to a lighter footprint.
         </p>
         <p className="text-neutral-400">
           Your scan is processed on your own device. The image never leaves your
           browser.
         </p>
-      </div>
-    ),
-  },
-  contact: {
-    title: 'Contact',
-    body: (
-      <div className="space-y-5 text-sm text-neutral-300">
-        <p className="leading-relaxed">
-          Questions, press, or a brand that wants to be sized on SnapFit? Reach us
-          directly. We reply within two business days.
-        </p>
-        <div className="space-y-3">
-          <a href="mailto:hello@snapfit.style" className="flex items-center gap-3 text-neutral-200 hover:text-white transition-colors">
-            <Mail className="h-4 w-4" /> hello@snapfit.style
-          </a>
-          <a href="mailto:partners@snapfit.style" className="flex items-center gap-3 text-neutral-200 hover:text-white transition-colors">
-            <Mail className="h-4 w-4" /> partners@snapfit.style <span className="text-neutral-500">(brands &amp; press)</span>
-          </a>
-          <a href="https://instagram.com" target="_blank" rel="noreferrer" className="flex items-center gap-3 text-neutral-200 hover:text-white transition-colors">
-            <span className="inline-flex h-4 w-4 items-center justify-center text-base leading-none">@</span> snapfit
-          </a>
-        </div>
       </div>
     ),
   },
