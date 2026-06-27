@@ -14,7 +14,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-  CheckCircle, ArrowRight, LayoutGrid, RotateCcw, Camera, Pencil, Download, ChevronDown,
+  CheckCircle, ArrowRight, LayoutGrid, RotateCcw, Camera, Pencil, Download, ChevronDown, RefreshCcw
 } from 'lucide-react';
 import { useMeasurementStore } from '../store/useMeasurementStore';
 import { useSnapFitMeasurement } from '../scanfit/useSnapFitMeasurement';
@@ -155,6 +155,7 @@ function ScanDetailsForm({ onContinue }) {
 // On completion it persists everything and hands off to the results step.
 // ---------------------------------------------------------------------------
 function ScanCamera({ onComplete, onEditDetails }) {
+  const [showToast, setShowToast] = useState(false);
   const {
     height, weight, gender,
     setBodyProfile, setSilhouette, setScanComplete,
@@ -163,7 +164,17 @@ function ScanCamera({ onComplete, onEditDetails }) {
   const {
     videoRef, canvasRef,
     phase, status, aligned, holdProgress, reasons, silhouette, captureFlash,
+    devices, switchCamera
   } = useSnapFitMeasurement();
+
+  const handleSwitchCamera = () => {
+    if (devices.length > 1) {
+      switchCamera();
+    } else {
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    }
+  };
 
   // When the scan finishes, persist results (so they survive navigation), show
   // the green confirmation briefly, then move to the results step.
@@ -201,11 +212,33 @@ function ScanCamera({ onComplete, onEditDetails }) {
             </span>
           </div>
 
-          <div className="relative rounded-2xl overflow-hidden bg-black aspect-video">
+          <div className="relative rounded-2xl overflow-hidden bg-black aspect-video group">
             <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
             <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+            
+            <button
+              onClick={handleSwitchCamera}
+              className="absolute top-4 right-4 z-10 flex items-center justify-center p-3 rounded-full bg-black/60 border border-white/20 text-white hover:bg-black/80 transition-colors backdrop-blur-md"
+              title="Switch Camera"
+            >
+              <RefreshCcw className="w-5 h-5" />
+            </button>
+            
+            <AnimatePresence>
+              {showToast && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute top-16 right-4 bg-neutral-900/90 backdrop-blur-md text-white px-4 py-2 rounded-lg text-xs font-medium shadow-xl z-20 border border-white/10"
+                >
+                  No additional camera detected.
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {captureFlash && (
-              <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/25 backdrop-blur-sm">
+              <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/25 backdrop-blur-sm z-30">
                 <div className="flex items-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-black font-bold shadow-lg">
                   <CheckCircle className="h-6 w-6" />
                   {captureFlash === 'front' ? 'Front view recorded' : 'Side view recorded'}
