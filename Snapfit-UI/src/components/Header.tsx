@@ -13,9 +13,9 @@ export default function Header() {
       <div className="mx-auto max-w-7xl rounded-2xl border border-neutral-800/80 bg-neutral-900/40 backdrop-blur-md px-6 py-4 shadow-xl">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="rounded-xl bg-accent p-2 text-black shadow-md shadow-accent/20 group-hover:scale-105 transition-transform duration-200">
-              <Logo className="h-6 w-6" />
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="shadow-sm shadow-accent/20 rounded-lg overflow-hidden group-hover:scale-105 transition-transform duration-200 flex items-center justify-center">
+              <Logo className="h-10 w-10" />
             </div>
             <div>
               <span className="font-display text-2xl text-white tracking-tight">

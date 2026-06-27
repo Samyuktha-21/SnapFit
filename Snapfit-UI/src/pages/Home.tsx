@@ -16,16 +16,16 @@ export default function Home() {
   const shirtImages = Array.from({ length: 28 }, (_, i) => `/shirts/${(i % 12) + 1}.jpg`);
 
   return (
-    <div className="relative z-0 min-h-[68vh] flex flex-col items-center justify-center py-4 px-6">
+    <div className="relative z-0 min-h-[85vh] flex flex-col items-center justify-center py-4 px-6">
       {/* Background Grid Motion */}
       <div className="fixed inset-0 pointer-events-none opacity-80">
         <GridMotion items={shirtImages} gradientColor="#000000" />
       </div>
 
       {/* Top Left Logo */}
-      <div className="absolute top-6 left-6 md:top-8 md:left-8 flex items-center gap-2 z-50">
-        <div className="rounded-lg bg-accent p-1.5 text-black shadow-sm">
-          <Logo className="h-5 w-5" />
+      <div className="absolute top-6 left-6 md:top-8 md:left-8 flex items-center gap-3 z-50">
+        <div className="shadow-sm rounded-lg overflow-hidden flex items-center justify-center">
+          <Logo className="h-10 w-10" />
         </div>
         <span className="font-display text-2xl tracking-tight text-white">SnapFit</span>
       </div>

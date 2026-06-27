@@ -83,15 +83,23 @@ export default function Footer() {
   const linkClass = 'text-sm tracking-wide text-neutral-300 hover:text-white transition-colors cursor-pointer';
 
   return (
-    <footer className="w-full relative z-10 mt-auto border-t border-white/10">
-      <div className="mx-auto max-w-7xl px-6 py-6 flex justify-center">
+    <footer className="w-full relative z-10 mt-auto">
+      <div className="mx-auto max-w-7xl px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        {/* Spacer to keep nav centered on desktop */}
+        <div className="hidden md:block flex-1" />
+        
         {/* The three options, centered — wrapped in a semi-transparent pill so the
             text stays readable against the scrolling image grid behind the footer. */}
-        <nav className="flex items-center gap-5 sm:gap-7 rounded-full bg-black/60 backdrop-blur-sm px-5 py-2.5 border border-white/10">
+        <nav className="flex items-center justify-center gap-5 sm:gap-7 rounded-full bg-black/60 backdrop-blur-sm px-5 py-2.5 border border-white/10">
           <button onClick={() => setOpen('about')} className={linkClass}>About</button>
           <button onClick={() => setOpen('contact')} className={linkClass}>Contact</button>
           <button onClick={() => setOpen('disclaimer')} className={linkClass}>Disclaimer</button>
         </nav>
+
+        {/* Copyright */}
+        <div className="flex-1 flex justify-center md:justify-end">
+          <span className="text-sm text-neutral-500 font-medium">© 2026 SnapFit</span>
+        </div>
       </div>
 
       {/* Panel modal */}
