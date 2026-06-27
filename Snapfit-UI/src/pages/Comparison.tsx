@@ -80,7 +80,7 @@ export default function Comparison() {
             <tr key={idx} className="border-b border-neutral-800/60 hover:bg-white/[0.02] transition-colors">
               <td className="px-5 py-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 shrink-0 rounded-xl bg-white border border-neutral-200 text-neutral-900 font-display flex items-center justify-center overflow-hidden">
+                  <div className="h-12 w-12 shrink-0 rounded-xl bg-white border border-neutral-200 text-neutral-900 font-display flex items-center justify-center overflow-hidden">
                     <img 
                       src={`/logos/${
                         row.brand === 'H&M' ? 'hnm' : 
@@ -88,11 +88,11 @@ export default function Comparison() {
                         row.brand.toLowerCase().replace(/[^a-z0-9]/g, '')
                       }.png`} 
                       alt={row.brand} 
-                      className="w-full h-full object-contain p-1.5"
+                      className="w-full h-full object-contain p-1"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
                         e.currentTarget.parentElement!.innerHTML = row.brand.charAt(0);
-                        e.currentTarget.parentElement!.className = "h-10 w-10 shrink-0 rounded-xl bg-neutral-900 border border-neutral-700 text-neutral-200 font-display flex items-center justify-center overflow-hidden";
+                        e.currentTarget.parentElement!.className = "h-12 w-12 shrink-0 rounded-xl bg-neutral-900 border border-neutral-700 text-neutral-200 font-display flex items-center justify-center overflow-hidden";
                       }}
                     />
                   </div>
