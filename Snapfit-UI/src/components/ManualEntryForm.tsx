@@ -39,8 +39,6 @@ export default function ManualEntryForm({ onCancel, onSave }: Props) {
       hipWidth: toCm(hip),
       size: bodyProfile?.size || 'M', // mock size if not present
       confidence: 100, // Manual entry is 100%
-      frontPose: bodyProfile?.frontPose,
-      sidePose: bodyProfile?.sidePose
     };
 
     setBodyProfile(newProfile);
