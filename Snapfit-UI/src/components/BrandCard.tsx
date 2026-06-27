@@ -34,7 +34,7 @@ export default function BrandCard({ brand, gender, bodyProfile, fitPref }: Brand
       <div className="relative z-10 flex flex-col h-full">
         {/* Header */}
         <div className="flex items-center gap-3 mb-5">
-          <div className="h-14 w-14 shrink-0 rounded-2xl bg-white border border-neutral-200 text-neutral-900 font-display text-xl flex items-center justify-center overflow-hidden">
+          <div className="h-16 w-16 shrink-0 rounded-2xl bg-white border border-neutral-200 text-neutral-900 font-display text-xl flex items-center justify-center overflow-hidden">
             <img 
               src={brand.logoUrl || `/logos/${
                 brand.brand === 'H&M' ? 'hnm' : 
@@ -42,11 +42,11 @@ export default function BrandCard({ brand, gender, bodyProfile, fitPref }: Brand
                 brand.brand.toLowerCase().replace(/[^a-z0-9]/g, '')
               }.png`} 
               alt={brand.brand} 
-              className="w-full h-full object-contain p-2.5"
+              className="w-full h-full object-contain p-1.5"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
                 e.currentTarget.parentElement!.innerHTML = brand.brand.charAt(0);
-                e.currentTarget.parentElement!.className = "h-14 w-14 shrink-0 rounded-2xl bg-neutral-900 border border-neutral-700 text-white font-display text-xl flex items-center justify-center overflow-hidden";
+                e.currentTarget.parentElement!.className = "h-16 w-16 shrink-0 rounded-2xl bg-neutral-900 border border-neutral-700 text-white font-display text-xl flex items-center justify-center overflow-hidden";
               }}
             />
           </div>
