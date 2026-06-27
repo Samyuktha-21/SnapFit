@@ -12,8 +12,8 @@ export default function Home() {
     navigate('/scanfit');
   };
 
-  // Create an array of 42 items repeating the 12 shirt images
-  const shirtImages = Array.from({ length: 42 }, (_, i) => `/shirts/${(i % 12) + 1}.jpg`);
+  // Create an array of 42 items repeating the 27 shirt images
+  const shirtImages = Array.from({ length: 42 }, (_, i) => `/shirts/${(i % 27) + 1}.jpg`);
 
   return (
     <div className="relative z-0 min-h-[85vh] flex flex-col items-center justify-center py-4 px-6">
