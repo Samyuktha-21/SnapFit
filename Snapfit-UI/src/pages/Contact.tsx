@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function Contact() {
   return (
     <div className="min-h-[85vh] py-12 relative flex items-center justify-center">
