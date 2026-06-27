@@ -7,8 +7,9 @@ interface MeasurementState {
   isAuthenticated: boolean;
   user: UserProfile | null;
   
-  // Height & Gender
+  // Height, Weight & Gender (collected on the pre-scan details screen)
   height: number;
+  weight: number | null;
   gender: 'Men' | 'Women';
 
   // Display + fit preferences
@@ -26,6 +27,7 @@ interface MeasurementState {
   
   // UI actions
   setHeight: (height: number) => void;
+  setWeight: (weight: number | null) => void;
   setGender: (gender: 'Men' | 'Women') => void;
   setUnit: (unit: 'cm' | 'in') => void;
   setFitPref: (pref: FitPref) => void;
@@ -41,6 +43,7 @@ interface MeasurementState {
 const STORAGE_KEYS = {
   USER: 'snapfit_user',
   HEIGHT: 'snapfit_height',
+  WEIGHT: 'snapfit_weight',
   GENDER: 'snapfit_gender',
   PROFILE: 'snapfit_profile',
   CUSTOM_BRANDS: 'snapfit_custom_brands',
@@ -53,6 +56,7 @@ export const useMeasurementStore = create<MeasurementState>((set) => {
   const savedUserJson = localStorage.getItem(STORAGE_KEYS.USER);
   const savedUser = savedUserJson ? JSON.parse(savedUserJson) : null;
   const savedHeight = localStorage.getItem(STORAGE_KEYS.HEIGHT);
+  const savedWeight = localStorage.getItem(STORAGE_KEYS.WEIGHT);
   const savedGender = localStorage.getItem(STORAGE_KEYS.GENDER) as 'Men' | 'Women' | null;
   const savedProfileJson = localStorage.getItem(STORAGE_KEYS.PROFILE);
   const savedProfile = savedProfileJson ? JSON.parse(savedProfileJson) : null;
@@ -63,6 +67,7 @@ export const useMeasurementStore = create<MeasurementState>((set) => {
     isAuthenticated: !!savedUser,
     user: savedUser,
     height: savedHeight ? Number(savedHeight) : 175, // default
+    weight: savedWeight ? Number(savedWeight) : null,
     gender: savedGender || 'Men', // default
     unit: (localStorage.getItem(STORAGE_KEYS.UNIT) as 'cm' | 'in') || 'cm',
     fitPref: (localStorage.getItem(STORAGE_KEYS.FITPREF) as FitPref) || 'True',
@@ -81,6 +86,15 @@ export const useMeasurementStore = create<MeasurementState>((set) => {
       });
     },
     
+    setWeight: (weight) => {
+      if (weight == null) {
+        localStorage.removeItem(STORAGE_KEYS.WEIGHT);
+      } else {
+        localStorage.setItem(STORAGE_KEYS.WEIGHT, weight.toString());
+      }
+      set({ weight });
+    },
+
     setUnit: (unit) => {
       localStorage.setItem(STORAGE_KEYS.UNIT, unit);
       set({ unit });

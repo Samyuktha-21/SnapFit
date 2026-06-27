@@ -85,7 +85,7 @@ export default function Footer() {
 
   return (
     <footer className="w-full relative z-10 mt-auto border-t border-white/10">
-      <div className="mx-auto max-w-7xl px-6 py-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+      <div className="mx-auto max-w-7xl px-6 py-6 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         {/* Brand */}
         <div>
           <div className="flex items-center gap-2">
@@ -97,8 +97,9 @@ export default function Footer() {
           </p>
         </div>
 
-        {/* The three options — clearly visible */}
-        <nav className="flex items-center gap-7">
+        {/* The three options — wrapped in a semi-transparent pill so the text
+            stays readable against the scrolling image grid behind the footer. */}
+        <nav className="flex items-center gap-5 sm:gap-7 rounded-full bg-black/60 backdrop-blur-sm px-5 py-2.5 border border-white/10">
           <button onClick={() => setOpen('about')} className={linkClass}>About</button>
           <button onClick={() => setOpen('contact')} className={linkClass}>Contact</button>
           <button onClick={() => setOpen('disclaimer')} className={linkClass}>Disclaimer</button>

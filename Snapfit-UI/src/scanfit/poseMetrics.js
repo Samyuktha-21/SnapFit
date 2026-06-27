@@ -43,8 +43,52 @@ function mid(a, b) {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
+// Scan the segmentation mask horizontally at a given normalized y to recover the
+// TRUE outer body silhouette edges. Landmarks 23/24 sit on the hip JOINTS, which
+// drift inward toward the waist (consistently narrower than the real hip), so we
+// read the actual body edge from the mask instead.
+//
+// We sample a small band of rows around `yNorm` and, for each row, take the
+// WIDEST CONTIGUOUS run of foreground pixels — the torso. That way a detached arm
+// or hand blob beside the body (front view, arms slightly out) forms a separate
+// run and does not inflate the width. The median row is returned for robustness.
+//
+// Returns { widthMaskPx, leftX, rightX } in MASK pixels, or null. `band` is in
+// normalized y (fraction of frame height).
+export function maskEdgeWidthAtY(maskData, maskW, maskH, yNorm, band = 0.03) {
+  const rows = 7;
+  const y0 = yNorm - band / 2;
+  const y1 = yNorm + band / 2;
+  const found = [];
+  for (let i = 0; i < rows; i++) {
+    const yn = y0 + (y1 - y0) * (i / (rows - 1));
+    const py = Math.round(yn * maskH);
+    if (py < 0 || py >= maskH) continue;
+    const base = py * maskW;
+    // Longest contiguous foreground run in this row.
+    let bestLen = 0, bestL = -1, bestR = -1, runStart = -1;
+    for (let x = 0; x < maskW; x++) {
+      const fg = maskData[base + x] > 0.5;
+      if (fg && runStart === -1) runStart = x;
+      if ((!fg || x === maskW - 1) && runStart !== -1) {
+        const end = fg ? x : x - 1;
+        const len = end - runStart + 1;
+        if (len > bestLen) { bestLen = len; bestL = runStart; bestR = end; }
+        runStart = -1;
+      }
+    }
+    if (bestLen > 0) found.push({ widthMaskPx: bestLen, leftX: bestL, rightX: bestR });
+  }
+  if (!found.length) return null;
+  found.sort((a, b) => a.widthMaskPx - b.widthMaskPx);
+  return found[Math.floor(found.length / 2)]; // median row
+}
+
 // FRONT-VIEW measurements (all pixels; the final `ratio` is scale-independent).
-export function extractFrontMetrics(lm, w, h) {
+// When a segmentation mask is supplied we ALSO compute a mask-edge hip width
+// (the reliable one); the landmark hip width is kept alongside it so the two can
+// be logged and compared against real tape measurements before we switch over.
+export function extractFrontMetrics(lm, w, h, mask) {
   const shoulderWidthPx = distancePx(lm[LM.L_SHOULDER], lm[LM.R_SHOULDER], w, h);
   const hipWidthPx = distancePx(lm[LM.L_HIP], lm[LM.R_HIP], w, h); // weak: drifts inward
   const torsoLengthPx = distancePx(
@@ -54,7 +98,17 @@ export function extractFrontMetrics(lm, w, h) {
   );
   const pixelHeightPx = Math.abs(bottomY(lm) - lm[LM.NOSE].y) * h;
   const ratio = pixelHeightPx ? shoulderWidthPx / pixelHeightPx : 0;
-  return { shoulderWidthPx, hipWidthPx, torsoLengthPx, pixelHeightPx, ratio };
+
+  // Mask-edge hip width, converted from mask px to frame px so it is directly
+  // comparable to the landmark-based hipWidthPx (same units).
+  let hipWidthMaskPx = null;
+  if (mask && mask.data) {
+    const hipY = (lm[LM.L_HIP].y + lm[LM.R_HIP].y) / 2;
+    const edge = maskEdgeWidthAtY(mask.data, mask.width, mask.height, hipY);
+    if (edge) hipWidthMaskPx = edge.widthMaskPx * (w / mask.width);
+  }
+
+  return { shoulderWidthPx, hipWidthPx, hipWidthMaskPx, torsoLengthPx, pixelHeightPx, ratio };
 }
 
 // In a side view, the body's horizontal silhouette width AT CHEST LEVEL *is* the
@@ -92,10 +146,17 @@ export function extractSideMetrics(lm, w, h, mask) {
   const pixelHeightPx = Math.abs(bottomY(lm) - lm[LM.NOSE].y) * h;
   if (mask && mask.data) {
     const torsoDepthPx = measureSideDepthPx(mask.data, mask.width, mask.height, lm);
+    // Independent hip estimate the front view physically can't give: the
+    // front-to-back BODY DEPTH at hip height, read the same way (mask edges).
+    const hipY = (lm[LM.L_HIP].y + lm[LM.R_HIP].y) / 2;
+    const hipEdge = maskEdgeWidthAtY(mask.data, mask.width, mask.height, hipY);
+    const hipDepthPx = hipEdge ? hipEdge.widthMaskPx * (w / mask.width) : null;
     return {
       torsoDepthPx,
+      hipDepthPx,
       pixelHeightPx,
       depthRatio: pixelHeightPx ? torsoDepthPx / pixelHeightPx : 0,
+      hipDepthRatio: pixelHeightPx && hipDepthPx ? hipDepthPx / pixelHeightPx : 0,
       depthCalibrated: true,
     };
   }
