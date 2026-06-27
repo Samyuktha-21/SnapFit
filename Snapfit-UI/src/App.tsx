@@ -12,6 +12,7 @@ import Results from './pages/Results';
 import BrandGrid from './pages/BrandGrid';
 import BrandDetail from './pages/BrandDetail';
 import Comparison from './pages/Comparison';
+import Contact from './pages/Contact';
 
 export default function App() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
             <Route path="/brands" element={<BrandGrid />} />
             <Route path="/brands/:brandName" element={<BrandDetail />} />
             <Route path="/comparison" element={<Comparison />} />
+            <Route path="/contact" element={<Contact />} />
             
             {/* Fallback route */}
             <Route path="*" element={<Navigate to="/" replace />} />
