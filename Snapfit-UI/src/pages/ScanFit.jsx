@@ -212,9 +212,9 @@ function ScanCamera({ onComplete, onEditDetails }) {
             </span>
           </div>
 
-          <div className="relative rounded-2xl overflow-hidden bg-black aspect-video group">
+          <div className="relative rounded-2xl overflow-hidden bg-black aspect-[9/16] md:aspect-video group">
             <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-cover" />
             
             <button
               onClick={handleSwitchCamera}
