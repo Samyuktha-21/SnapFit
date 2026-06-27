@@ -79,7 +79,7 @@ function ScanDetailsForm({ onContinue }) {
     'bg-black border border-neutral-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-accent transition-colors w-full';
 
   return (
-    <div className="min-h-[85vh] py-10 px-4 flex items-start justify-center">
+    <div className="min-h-screen bg-transparent md:bg-black text-white flex flex-col font-display relative">
       <div className="w-full max-w-md rounded-3xl border border-neutral-800 bg-neutral-900/40 p-7 md:p-8 shadow-xl">
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-white/10 text-white border border-white/20">
           <Camera className="h-3.5 w-3.5" /> Before we scan
@@ -176,8 +176,6 @@ function ScanCamera({ onComplete, onEditDetails }) {
     }
   };
 
-  // When the scan finishes, persist results (so they survive navigation), show
-  // the green confirmation briefly, then move to the results step.
   useEffect(() => {
     if (phase !== 'done') return;
     setSilhouette(silhouette || null);
@@ -189,16 +187,15 @@ function ScanCamera({ onComplete, onEditDetails }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  const statusText = status !== 'Ready'
-    ? status
-    : aligned ? 'Hold still…' : 'Line up with the guide';
+  const statusMsg = phase === 'done'
+    ? 'Calculating profile…'
+    : aligned ? 'Perfect! Hold still...' : (reasons && reasons.length > 0 ? reasons[0] : 'Line up with the guide');
 
   return (
-    <div className="min-h-[85vh] py-6 px-4 md:px-6">
-      <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        {/* LEFT — camera + guide */}
-        <div className="rounded-3xl border border-neutral-800 bg-neutral-900/40 p-5 shadow-xl">
-          <div className="flex items-center justify-between mb-4">
+    <div className="min-h-screen bg-black text-white p-0 md:p-6 flex flex-col">
+      <div className="mx-auto max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="rounded-none md:rounded-3xl border-none md:border border-neutral-800 bg-neutral-900/40 p-5 shadow-xl relative">
+          <div className="flex items-center justify-between mb-4 z-10 relative">
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${
               phase === 'done'
                 ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
@@ -208,47 +205,56 @@ function ScanCamera({ onComplete, onEditDetails }) {
             </span>
             <span className="flex items-center gap-2 text-xs text-neutral-400">
               <span className={`h-2 w-2 rounded-full ${aligned ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-              {statusText}
+              {statusMsg}
             </span>
           </div>
 
-          <div className="relative rounded-2xl overflow-hidden bg-black aspect-[9/16] md:aspect-video group">
+          <div className="fixed inset-0 z-0 md:relative md:rounded-2xl overflow-hidden bg-black md:aspect-video group">
             <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
             <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-cover" />
             
+            <div className="absolute top-[10%] left-0 w-full flex justify-center pointer-events-none z-30 transition-opacity duration-300">
+              <div className={`backdrop-blur-md px-6 py-3 rounded-full text-white font-bold text-base md:text-lg tracking-wide border shadow-2xl transition-all ${
+                aligned ? 'bg-emerald-500/80 border-emerald-400 text-black' : 'bg-black/70 border-white/20'
+              }`}>
+                {statusMsg}
+              </div>
+            </div>
+            
             <button
               onClick={handleSwitchCamera}
-              className="absolute top-4 right-4 z-10 flex items-center justify-center p-3 rounded-full bg-black/60 border border-white/20 text-white hover:bg-black/80 transition-colors backdrop-blur-md"
+              className="absolute top-4 right-4 z-20 bg-white/10 hover:bg-white/20 backdrop-blur-md p-3 rounded-full border border-white/20 transition-all text-white"
               title="Switch Camera"
             >
-              <RefreshCcw className="w-5 h-5" />
+              <RefreshCcw size={20} />
             </button>
-            
-            <AnimatePresence>
-              {showToast && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="absolute top-16 right-4 bg-neutral-900/90 backdrop-blur-md text-white px-4 py-2 rounded-lg text-xs font-medium shadow-xl z-20 border border-white/10"
-                >
-                  No additional camera detected.
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {captureFlash && (
-              <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/25 backdrop-blur-sm z-30">
-                <div className="flex items-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-black font-bold shadow-lg">
-                  <CheckCircle className="h-6 w-6" />
-                  {captureFlash === 'front' ? 'Front view recorded' : 'Side view recorded'}
-                </div>
-              </div>
-            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none md:hidden" />
           </div>
 
+          <AnimatePresence>
+            {showToast && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute top-16 right-4 bg-neutral-900/90 backdrop-blur-md text-white px-4 py-2 rounded-lg text-xs font-medium shadow-xl z-20 border border-white/10"
+              >
+                No additional camera detected.
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {captureFlash && (
+            <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/25 backdrop-blur-sm z-30">
+              <div className="flex items-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-black font-bold shadow-lg">
+                <CheckCircle className="h-6 w-6" />
+                {captureFlash === 'front' ? 'Front view recorded' : 'Side view recorded'}
+              </div>
+            </div>
+          )}
+
           {phase !== 'done' && (
-            <div className="mt-4">
+            <div className="mt-4 relative z-10">
               <div className="h-1.5 rounded-full bg-neutral-800 overflow-hidden">
                 <div className="h-full bg-emerald-400 transition-[width] duration-100"
                   style={{ width: `${Math.round(holdProgress * 100)}%` }} />
@@ -266,7 +272,7 @@ function ScanCamera({ onComplete, onEditDetails }) {
             </div>
           )}
 
-          <div className="mt-4 flex items-center justify-between text-[11px] text-neutral-500 border-t border-neutral-800 pt-3">
+          <div className="mt-4 relative z-10 flex items-center justify-between text-[11px] text-neutral-500 border-t border-neutral-800 pt-3">
             <span>{height} cm{weight != null ? ` · ${weight} kg` : ''} · {gender}</span>
             <button onClick={onEditDetails}
               className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
@@ -275,7 +281,6 @@ function ScanCamera({ onComplete, onEditDetails }) {
           </div>
         </div>
 
-        {/* RIGHT — tips while scanning */}
         <TipsCard />
       </div>
     </div>
@@ -299,7 +304,6 @@ function ResultsView({ onRescan, onEditDetails }) {
   const bodyShape = classifyBodyShape(silhouette, gender);
   const profile = predictions ? profileFromStore(height, weight, gender) : null;
 
-  // Keep the persisted profile in sync (e.g. after the user adds weight here).
   useEffect(() => {
     if (profile) setBodyProfile(profile);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -323,13 +327,11 @@ function ResultsView({ onRescan, onEditDetails }) {
     <div className="min-h-[85vh] py-6 px-4 md:px-6">
       <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
 
-        {/* LEFT — scan-complete summary + Rescan right below */}
         <div className="rounded-3xl border border-neutral-800 bg-neutral-900/40 p-5 shadow-xl">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
             <CheckCircle className="h-3.5 w-3.5" /> Scan complete
           </span>
 
-          {/* Body type highlight (where the camera image was) */}
           <div className="mt-4 rounded-2xl bg-black/40 border border-white/10 aspect-video flex flex-col items-center justify-center text-center p-6">
             {bodyShape ? (
               <>
@@ -343,7 +345,6 @@ function ResultsView({ onRescan, onEditDetails }) {
             )}
           </div>
 
-          {/* Rescan — right below the image/tile */}
           <button
             onClick={onRescan}
             className="mt-4 w-full flex items-center justify-center gap-2 rounded-xl bg-accent text-black font-bold text-sm py-3 hover:brightness-95 transition cursor-pointer"
@@ -360,7 +361,6 @@ function ResultsView({ onRescan, onEditDetails }) {
           </div>
         </div>
 
-        {/* RIGHT — measurements + actions + Size Passport dropdown */}
         <div className="rounded-3xl border border-neutral-800 bg-neutral-900/40 p-6 md:p-8 shadow-xl">
           <h3 className="text-lg font-bold text-white tracking-tight mb-5">Your measurements</h3>
 
@@ -399,7 +399,6 @@ function ResultsView({ onRescan, onEditDetails }) {
                 </tbody>
               </table>
 
-              {/* Actions */}
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => saveAndGo('/brands')}
                   className="flex items-center justify-center gap-1.5 rounded-xl bg-accent hover:brightness-95 text-black font-bold text-sm py-3 transition cursor-pointer">
@@ -411,7 +410,6 @@ function ResultsView({ onRescan, onEditDetails }) {
                 </button>
               </div>
 
-              {/* Size Passport — Inline Accordion */}
               <div className="mt-3 w-full">
                 <button
                   onClick={() => setShowPassport((v) => !v)}
