@@ -1,4 +1,4 @@
-import { Shirt, Ruler } from 'lucide-react';
+
 
 interface Props {
   className?: string;
