@@ -62,18 +62,6 @@ export default function Header() {
             >
               Comparison View
             </NavLink>
-            <NavLink
-              to="/contact"
-              className={({ isActive }) =>
-                `px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                  isActive 
-                    ? 'text-white bg-slate-900 border border-slate-800/60' 
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/30'
-                }`
-              }
-            >
-              Contact
-            </NavLink>
           </nav>
 
           {/* User Controls */}
