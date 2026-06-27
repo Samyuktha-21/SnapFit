@@ -25,17 +25,39 @@ export default function Capture() {
   const [isAligned, setIsAligned] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [triggerFlash, setTriggerFlash] = useState(false);
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [currentDeviceIndex, setCurrentDeviceIndex] = useState(0);
+
+  // Fetch devices on mount
+  useEffect(() => {
+    async function getDevices() {
+      try {
+        const allDevices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = allDevices.filter(d => d.kind === 'videoinput');
+        setDevices(videoDevices);
+      } catch (e) {
+        console.error("Failed to enumerate devices", e);
+      }
+    }
+    getDevices();
+  }, []);
 
   const toggleCamera = () => {
-    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+    if (devices.length > 1) {
+      const nextIndex = (currentDeviceIndex + 1) % devices.length;
+      setCurrentDeviceIndex(nextIndex);
+    }
   };
 
-  // Initialize camera stream on mount and when facingMode changes
+  // Initialize camera stream on mount and when device changes
   useEffect(() => {
-    startCamera(facingMode);
+    if (devices.length > 0) {
+      startCamera(devices[currentDeviceIndex].deviceId);
+    } else {
+      startCamera(); // fallback
+    }
     return () => stopCamera();
-  }, [facingMode, startCamera, stopCamera]);
+  }, [currentDeviceIndex, devices.length, startCamera, stopCamera]);
 
   const handleCaptureTrigger = () => {
     if (countdown !== null) return;
@@ -128,13 +150,15 @@ export default function Capture() {
               isAligned={isAligned}
             />
             
-            <button
-              onClick={toggleCamera}
-              className="flex items-center justify-center p-4 rounded-full bg-neutral-900 border border-neutral-700 text-white hover:bg-neutral-800 transition-colors"
-              title="Switch Camera"
-            >
-              <RefreshCcw className="w-6 h-6" />
-            </button>
+            {devices.length > 1 && (
+              <button
+                onClick={toggleCamera}
+                className="flex items-center justify-center p-4 rounded-full bg-neutral-900 border border-neutral-700 text-white hover:bg-neutral-800 transition-colors"
+                title="Switch Camera"
+              >
+                <RefreshCcw className="w-6 h-6" />
+              </button>
+            )}
           </div>
         </div>
 
