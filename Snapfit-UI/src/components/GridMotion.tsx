@@ -79,11 +79,11 @@ const GridMotion: FC<GridMotionProps> = ({ items = [], gradientColor = 'black' }
         }}
       >
         <div className="absolute inset-0 pointer-events-none z-[4] bg-[length:250px]"></div>
-        <div className="gap-4 flex-none relative w-[450vw] h-[150vh] grid grid-rows-4 grid-cols-1 rotate-[-15deg] origin-center z-[2]">
+        <div className="gap-4 flex-none relative w-[400vw] md:w-[450vw] grid grid-rows-4 grid-cols-1 rotate-[-15deg] origin-center z-[2]">
           {Array.from({ length: 4 }, (_, rowIndex) => (
             <div
               key={rowIndex}
-              className="grid gap-4 w-full h-full"
+              className="grid gap-4 w-full"
               style={{ gridTemplateColumns: 'repeat(21, 1fr)', willChange: 'transform' }}
               ref={el => {
                 if (el) rowRefs.current[rowIndex] = el;
@@ -92,8 +92,8 @@ const GridMotion: FC<GridMotionProps> = ({ items = [], gradientColor = 'black' }
               {Array.from({ length: 21 }, (_, itemIndex) => {
                 const content = combinedItems[rowIndex * 7 + (itemIndex % 7)];
                 return (
-                  <div key={itemIndex} className="relative">
-                    <div className="relative w-full h-full overflow-hidden rounded-[10px] bg-[#111] flex items-center justify-center text-white text-[1.5rem]">
+                  <div key={itemIndex} className="relative w-full aspect-square">
+                    <div className="absolute inset-0 overflow-hidden rounded-[10px] bg-[#111] flex items-center justify-center text-white text-[1.5rem]">
                       {typeof content === 'string' && (content.startsWith('http') || content.startsWith('/') || content.match(/\.(jpeg|jpg|gif|png|webp)$/i)) ? (
                         <div
                           className="w-full h-full bg-cover bg-center absolute top-0 left-0"
