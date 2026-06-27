@@ -56,19 +56,6 @@ export function useSnapFitMeasurement() {
     goPhase('front');
   }, []);
 
-  // Enumerate devices once
-  useEffect(() => {
-    async function getDevices() {
-      try {
-        const all = await navigator.mediaDevices.enumerateDevices();
-        const videoInputs = all.filter(d => d.kind === 'videoinput');
-        setDevices(videoInputs);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    getDevices();
-  }, []);
 
   const switchCamera = useCallback(() => {
     if (devices.length > 1) {
@@ -102,6 +89,15 @@ export function useSnapFitMeasurement() {
 
         stream = await navigator.mediaDevices.getUserMedia({ video: videoOpts });
         if (videoRef.current) videoRef.current.srcObject = stream;
+        
+        // Enumerate devices AFTER permissions are granted to get the full list
+        try {
+          const all = await navigator.mediaDevices.enumerateDevices();
+          const videoInputs = all.filter(d => d.kind === 'videoinput');
+          setDevices(videoInputs);
+        } catch (e) {
+          console.error(e);
+        }
         
         if (!landmarkerRef.current) {
           const vision = await FilesetResolver.forVisionTasks(
