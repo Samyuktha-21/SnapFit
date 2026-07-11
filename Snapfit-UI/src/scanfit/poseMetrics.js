@@ -281,6 +281,144 @@ export function extractSideMetrics(lm, w, h, mask) {
   return { torsoDepthProxyPx, pixelHeightPx, depthCalibrated: false };
 }
 
+// ===========================================================================
+// AUTO HEIGHT via a credit-card scale reference (optional feature).
+// A webcam has no scale, so if the user holds a standard card (ISO/IEC 7810
+// ID-1, long edge 85.6 mm) flat against their chest, the card's pixel width
+// gives us mm-per-pixel. Multiply the head-to-foot pixel span by that and we
+// get real height. Card detection is heuristic and best-effort — the caller
+// always has a graceful manual fallback when it fails.
+// ===========================================================================
+
+const CARD_LONG_EDGE_MM = 85.6;
+
+// Heuristic card finder inside a region of interest (the chest area). Sobel
+// edges → 8-connected components → pick the component whose bounding box best
+// matches a credit card's 1.586 aspect ratio. Returns the box (in full-frame
+// px) + a confidence, or null. `data` is the full-frame RGBA Uint8ClampedArray.
+export function detectCardInRegion(data, W, H, roi) {
+  const x0 = Math.max(0, roi.x0 | 0), y0 = Math.max(0, roi.y0 | 0);
+  const x1 = Math.min(W - 1, roi.x1 | 0), y1 = Math.min(H - 1, roi.y1 | 0);
+  const rw = x1 - x0, rh = y1 - y0;
+  if (rw < 12 || rh < 12) return null;
+
+  const gray = new Float32Array(rw * rh);
+  for (let y = 0; y < rh; y++) {
+    for (let x = 0; x < rw; x++) {
+      const i = ((y0 + y) * W + (x0 + x)) * 4;
+      gray[y * rw + x] = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    }
+  }
+
+  const mag = new Float32Array(rw * rh);
+  let sum = 0, sum2 = 0, n = 0;
+  for (let y = 1; y < rh - 1; y++) {
+    for (let x = 1; x < rw - 1; x++) {
+      const a = gray[(y - 1) * rw + (x - 1)], b = gray[(y - 1) * rw + x], c = gray[(y - 1) * rw + (x + 1)];
+      const d = gray[y * rw + (x - 1)], f = gray[y * rw + (x + 1)];
+      const g = gray[(y + 1) * rw + (x - 1)], h2 = gray[(y + 1) * rw + x], k = gray[(y + 1) * rw + (x + 1)];
+      const gx = (c + 2 * f + k) - (a + 2 * d + g);
+      const gy = (g + 2 * h2 + k) - (a + 2 * b + c);
+      const m = Math.abs(gx) + Math.abs(gy);
+      mag[y * rw + x] = m; sum += m; sum2 += m * m; n++;
+    }
+  }
+  const mean = sum / n, sd = Math.sqrt(Math.max(0, sum2 / n - mean * mean));
+  const thr = mean + 1.2 * sd;
+
+  const edge = new Uint8Array(rw * rh);
+  for (let i = 0; i < edge.length; i++) edge[i] = mag[i] > thr ? 1 : 0;
+
+  const visited = new Uint8Array(rw * rh);
+  const stack = [];
+  let best = null;
+  for (let sy = 0; sy < rh; sy++) {
+    for (let sx = 0; sx < rw; sx++) {
+      const si = sy * rw + sx;
+      if (!edge[si] || visited[si]) continue;
+      let minx = sx, maxx = sx, miny = sy, maxy = sy, count = 0;
+      stack.length = 0; stack.push(si); visited[si] = 1;
+      while (stack.length) {
+        const p = stack.pop();
+        const py = (p / rw) | 0, px = p - py * rw;
+        count++;
+        if (px < minx) minx = px; if (px > maxx) maxx = px;
+        if (py < miny) miny = py; if (py > maxy) maxy = py;
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (!dx && !dy) continue;
+            const nx = px + dx, ny = py + dy;
+            if (nx < 0 || ny < 0 || nx >= rw || ny >= rh) continue;
+            const ni = ny * rw + nx;
+            if (edge[ni] && !visited[ni]) { visited[ni] = 1; stack.push(ni); }
+          }
+        }
+      }
+      const bw = maxx - minx, bh = maxy - miny;
+      if (bw < 16 || bh < 10 || count < 24) continue;
+      const longEdge = Math.max(bw, bh), shortEdge = Math.min(bw, bh);
+      const aspect = longEdge / shortEdge;
+      if (aspect < 1.3 || aspect > 2.05) continue; // card is 1.586
+      const aspectScore = 1 - Math.min(1, Math.abs(aspect - 1.586) / 0.6);
+      const sizeScore = Math.min(1, longEdge / (rw * 0.5));
+      const score = aspectScore * 0.7 + sizeScore * 0.3;
+      if (!best || score > best.score) {
+        best = { x: x0 + minx, y: y0 + miny, w: bw, h: bh, widthPx: longEdge, aspect, score, confidence: aspectScore };
+      }
+    }
+  }
+  return best;
+}
+
+// Full auto-height estimate from one captured frame + its landmarks.
+// Returns { ok, heightCm?, reason?, debug }.
+export function estimateAutoHeight(data, W, H, lm) {
+  // Pixel height span: nose (0) → average FOOT INDEX (31/32). Foot index sits
+  // closer to the floor than the ankles, so it's a better bottom reference.
+  const noseY = lm[LM.NOSE].y * H;
+  const footY = ((lm[LM.L_FOOT].y + lm[LM.R_FOOT].y) / 2) * H;
+  const pixelSpan = Math.abs(footY - noseY);
+
+  // Head-top offset: the nose isn't the crown. MediaPipe pose has no chin
+  // landmark, so we proxy nose-to-chin from the mouth (9,10): chin ≈ twice the
+  // nose→mouth drop. Add ~11% of that to approximate nose→crown.
+  const mouthY = ((lm[9].y + lm[10].y) / 2) * H;
+  const noseToChin = Math.abs(mouthY - noseY) * 2.0;
+  const headOffset = 0.11 * noseToChin;
+  const fullSpan = pixelSpan + headOffset;
+
+  // Chest ROI to search for the card.
+  const cxPx = ((lm[LM.L_SHOULDER].x + lm[LM.R_SHOULDER].x) / 2) * W;
+  const shoulderSpanPx = Math.abs(lm[LM.L_SHOULDER].x - lm[LM.R_SHOULDER].x) * W;
+  const shoulderY = ((lm[LM.L_SHOULDER].y + lm[LM.R_SHOULDER].y) / 2) * H;
+  const hipY = ((lm[LM.L_HIP].y + lm[LM.R_HIP].y) / 2) * H;
+  const roi = {
+    x0: cxPx - shoulderSpanPx * 0.9,
+    x1: cxPx + shoulderSpanPx * 0.9,
+    y0: shoulderY + (hipY - shoulderY) * 0.05,
+    y1: shoulderY + (hipY - shoulderY) * 0.75,
+  };
+
+  const baseDebug = { pixelSpan, headOffset, fullSpan, roi };
+  const card = detectCardInRegion(data, W, H, roi);
+  if (!card) return { ok: false, reason: 'no-card', debug: baseDebug };
+
+  const scaleMmPerPx = CARD_LONG_EDGE_MM / card.widthPx;
+  const heightCm = (fullSpan * scaleMmPerPx) / 10;
+  const debug = {
+    ...baseDebug,
+    cardBox: { x: card.x, y: card.y, w: card.w, h: card.h },
+    cardWidthPx: card.widthPx,
+    aspect: card.aspect,
+    confidence: card.confidence,
+    scaleMmPerPx,
+    heightCm,
+  };
+  if (card.confidence < 0.35) return { ok: false, reason: 'low-confidence', heightCm, debug };
+  if (heightCm < 130 || heightCm > 220) return { ok: false, reason: 'out-of-range', heightCm, debug };
+  return { ok: true, heightCm, debug };
+}
+
 // Ramanujan's ellipse-perimeter approximation. We model the chest cross-section
 // as an ellipse with half-width a (FRONT) and half-depth b (SIDE) — the standard
 // way to estimate a girth from two orthogonal widths. Returns pixels.

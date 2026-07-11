@@ -8,16 +8,20 @@ import { PoseLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 import {
   extractFrontMetrics, extractSideMetrics,
   checkFrontAlignment, checkSideAlignment, chestGirthProxy,
+  estimateAutoHeight,
 } from './poseMetrics';
 import { sizeFromRatio, measurementsForSize } from './sizeChart';
 import { drawFrontGuide, drawSideGuide } from './alignmentGuide';
 
 const HOLD_MS = 1000; // must stay aligned this long before auto-capture
 
-export function useSnapFitMeasurement() {
+export function useSnapFitMeasurement({ measureHeight = false } = {}) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const landmarkerRef = useRef(null);
+  const heightCanvasRef = useRef(null);        // offscreen frame grab for card scan
+  const measureHeightRef = useRef(measureHeight);
+  measureHeightRef.current = measureHeight;
 
   // Camera switching states
   const [devices, setDevices] = useState([]);
@@ -40,6 +44,9 @@ export function useSnapFitMeasurement() {
   const [result, setResult] = useState(null); // { size, measurements, front, side }
   const [silhouette, setSilhouette] = useState(null); // { bustW, waistW, hipW } from front mask — drives body-shape
   const [captureFlash, setCaptureFlash] = useState(null); // 'front' | 'side' — brief green "recorded" confirmation
+  const [detectedHeight, setDetectedHeight] = useState(null); // cm from card scale, or null
+  const [heightError, setHeightError] = useState(false);      // auto height failed → fall back to manual
+  const [heightDebug, setHeightDebug] = useState(null);       // dev-only debug payload
 
   const goPhase = (p) => { phaseRef.current = p; setPhase(p); };
 
@@ -53,6 +60,9 @@ export function useSnapFitMeasurement() {
     setAligned(false);
     setReasons([]);
     setCaptureFlash(null);
+    setDetectedHeight(null);
+    setHeightError(false);
+    setHeightDebug(null);
     goPhase('front');
   }, []);
 
@@ -142,7 +152,7 @@ export function useSnapFitMeasurement() {
   useEffect(() => {
     let raf;
 
-    function capture(cur, metrics) {
+    function capture(cur, metrics, lm, video) {
       alignedSinceRef.current = null;
       setHoldProgress(0);
       // Green "recorded" confirmation, auto-clears after ~1.6s.
@@ -151,6 +161,34 @@ export function useSnapFitMeasurement() {
       if (cur === 'front') {
         frontRef.current = metrics;
         setSilhouette(metrics.silhouette || null);
+
+        // Optional: auto-measure height from a credit card held at the chest.
+        // Runs once on the captured frame; always has a graceful manual fallback.
+        if (measureHeightRef.current && lm && video && video.videoWidth) {
+          try {
+            const hc = heightCanvasRef.current || (heightCanvasRef.current = document.createElement('canvas'));
+            hc.width = video.videoWidth;
+            hc.height = video.videoHeight;
+            const hctx = hc.getContext('2d');
+            hctx.drawImage(video, 0, 0, hc.width, hc.height);
+            const img = hctx.getImageData(0, 0, hc.width, hc.height);
+            const est = estimateAutoHeight(img.data, hc.width, hc.height, lm);
+            setHeightDebug(est.debug || null);
+            if (est.ok) {
+              setDetectedHeight(Math.round(est.heightCm));
+              setHeightError(false);
+              console.log('[SnapFit height] detected=%scm', Math.round(est.heightCm), est.debug);
+            } else {
+              setDetectedHeight(null);
+              setHeightError(true);
+              console.log('[SnapFit height] auto-measure failed:', est.reason, est.debug);
+            }
+          } catch (e) {
+            setDetectedHeight(null);
+            setHeightError(true);
+            console.log('[SnapFit height] error:', e);
+          }
+        }
         // Hip width A/B log: old landmark distance vs new mask-edge width, in the
         // same (frame px) units, so we can compare against real tape measurements
         // before fully switching the hip measurement over to the mask method.
@@ -245,7 +283,7 @@ export function useSnapFitMeasurement() {
             if (alignedSinceRef.current == null) alignedSinceRef.current = performance.now();
             const held = performance.now() - alignedSinceRef.current;
             setHoldProgress(Math.min(held / HOLD_MS, 1));
-            if (held >= HOLD_MS) capture(cur, metrics);
+            if (held >= HOLD_MS) capture(cur, metrics, lm, video);
           } else {
             alignedSinceRef.current = null;
             setHoldProgress(0);
@@ -262,6 +300,7 @@ export function useSnapFitMeasurement() {
   return {
     videoRef, canvasRef,
     phase, status, aligned, holdProgress, reasons, debug, result, silhouette, captureFlash,
-    reset, devices, switchCamera
+    reset, devices, switchCamera,
+    detectedHeight, heightError, heightDebug,
   };
 }

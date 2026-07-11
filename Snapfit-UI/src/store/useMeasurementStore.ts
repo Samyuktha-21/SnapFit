@@ -24,6 +24,11 @@ interface MeasurementState {
   scanComplete: boolean;
   silhouette: { bustW: number; waistW: number; hipW: number } | null;
 
+  // Auto height measurement (optional card-based detection during the scan)
+  autoHeight: boolean;              // user opted to measure height during scan
+  detectedHeight: number | null;   // height detected from the card, if successful
+  heightDebug: any | null;         // dev-only debug payload for the D×3 overlay
+
   // Scan captures
   capturedLandmarks: any | null;
   
@@ -39,6 +44,9 @@ interface MeasurementState {
   setBodyProfile: (profile: BodyMeasurements | null) => void;
   setScanComplete: (v: boolean) => void;
   setSilhouette: (s: { bustW: number; waistW: number; hipW: number } | null) => void;
+  setAutoHeight: (v: boolean) => void;
+  setDetectedHeight: (h: number | null) => void;
+  setHeightDebug: (d: any | null) => void;
   setCapturedLandmarks: (landmarks: any | null) => void;
   addCustomBrand: (brand: BrandData) => void;
   loginUser: (email: string, gender: 'Men' | 'Women') => void;
@@ -55,6 +63,8 @@ const STORAGE_KEYS = {
   PROFILE: 'snapfit_profile',
   SCAN_COMPLETE: 'snapfit_scan_complete',
   SILHOUETTE: 'snapfit_silhouette',
+  AUTO_HEIGHT: 'snapfit_auto_height',
+  DETECTED_HEIGHT: 'snapfit_detected_height',
   CUSTOM_BRANDS: 'snapfit_custom_brands',
   UNIT: 'snapfit_unit',
   FITPREF: 'snapfit_fitpref'
@@ -87,6 +97,11 @@ export const useMeasurementStore = create<MeasurementState>((set) => {
     // once the user leaves the site (closes the tab), as requested.
     scanComplete: sessionStorage.getItem(STORAGE_KEYS.SCAN_COMPLETE) === 'true',
     silhouette: savedSilhouette,
+    autoHeight: sessionStorage.getItem(STORAGE_KEYS.AUTO_HEIGHT) === 'true',
+    detectedHeight: sessionStorage.getItem(STORAGE_KEYS.DETECTED_HEIGHT)
+      ? Number(sessionStorage.getItem(STORAGE_KEYS.DETECTED_HEIGHT))
+      : null,
+    heightDebug: null,
     capturedLandmarks: null,
     customBrands: savedCustomBrands,
     
@@ -167,6 +182,22 @@ export const useMeasurementStore = create<MeasurementState>((set) => {
       }
       set({ silhouette });
     },
+
+    setAutoHeight: (autoHeight) => {
+      sessionStorage.setItem(STORAGE_KEYS.AUTO_HEIGHT, autoHeight ? 'true' : 'false');
+      set({ autoHeight });
+    },
+
+    setDetectedHeight: (detectedHeight) => {
+      if (detectedHeight == null) {
+        sessionStorage.removeItem(STORAGE_KEYS.DETECTED_HEIGHT);
+      } else {
+        sessionStorage.setItem(STORAGE_KEYS.DETECTED_HEIGHT, String(detectedHeight));
+      }
+      set({ detectedHeight });
+    },
+
+    setHeightDebug: (heightDebug) => set({ heightDebug }),
 
     setCapturedLandmarks: (capturedLandmarks) => set({ capturedLandmarks }),
     

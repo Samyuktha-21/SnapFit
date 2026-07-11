@@ -14,7 +14,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-  CheckCircle, ArrowRight, LayoutGrid, RotateCcw, Camera, Pencil, Download, ChevronDown, RefreshCcw, ZoomIn
+  CheckCircle, ArrowRight, LayoutGrid, RotateCcw, Camera, Pencil, Download, ChevronDown, RefreshCcw, ZoomIn,
+  Ruler, CreditCard
 } from 'lucide-react';
 import { useMeasurementStore } from '../store/useMeasurementStore';
 import { useSnapFitMeasurement } from '../scanfit/useSnapFitMeasurement';
@@ -56,22 +57,36 @@ function profileFromStore(height, weight, gender) {
 // Step 1 — Details form (shown BEFORE the camera).
 // ---------------------------------------------------------------------------
 function ScanDetailsForm({ onContinue }) {
-  const { height, weight, gender, setHeight, setWeight, setGender } = useMeasurementStore();
+  const {
+    height, weight, gender, autoHeight,
+    setHeight, setWeight, setGender, setAutoHeight, setDetectedHeight,
+  } = useMeasurementStore();
 
-  const [heightCm, setHeightCm] = useState(height ? String(height) : '');
+  const [heightCm, setHeightCm] = useState(autoHeight ? '' : (height ? String(height) : ''));
   const [weightKg, setWeightKg] = useState(weight != null ? String(weight) : '');
   const [sex, setSex] = useState(
     gender === 'Men' ? 'male' : gender === 'Women' ? 'female' : null,
   );
+  const [autoMode, setAutoMode] = useState(autoHeight);
 
   const heightValid = Number(heightCm) > 0;
-  const canContinue = heightValid && (sex === 'male' || sex === 'female');
+  const canContinue = (heightValid || autoMode) && (sex === 'male' || sex === 'female');
+
+  const enableAuto = () => { setAutoMode(true); setHeightCm(''); };
+  const disableAuto = () => setAutoMode(false);
 
   const handleStart = () => {
     if (!canContinue) return;
-    setHeight(Number(heightCm));
     setWeight(weightKg ? Number(weightKg) : null);
     setGender(sex === 'male' ? 'Men' : 'Women');
+    setAutoHeight(autoMode);
+    if (autoMode) {
+      // Height will be detected during the scan; clear any prior value.
+      setHeight(0);
+      setDetectedHeight(null);
+    } else {
+      setHeight(Number(heightCm));
+    }
     onContinue();
   };
 
@@ -91,16 +106,41 @@ function ScanDetailsForm({ onContinue }) {
         </p>
 
         <div className="mt-6 space-y-5">
-          <label className="block">
+          <div className="block">
             <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">
-              Height (cm) <span className="text-accent">*</span>
+              Height (cm) {!autoMode && <span className="text-accent">*</span>}
             </span>
             <input
               type="number" inputMode="numeric" value={heightCm} placeholder="170"
+              disabled={autoMode}
               onChange={(e) => setHeightCm(e.target.value)}
-              className={`mt-1.5 ${field}`}
+              className={`mt-1.5 ${field} ${autoMode ? 'opacity-40 cursor-not-allowed' : ''}`}
             />
-          </label>
+
+            {!autoMode ? (
+              <button
+                type="button" onClick={enableAuto}
+                className="mt-2 text-[11px] font-semibold text-accent hover:underline cursor-pointer"
+              >
+                Or measure my height automatically during scan →
+              </button>
+            ) : (
+              <div className="mt-2 flex items-start gap-2 rounded-xl bg-accent/10 border border-accent/30 px-3 py-2">
+                <Ruler className="h-3.5 w-3.5 text-accent mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-[11px] text-accent font-semibold leading-snug">
+                    We'll detect your height using a credit card during the scan.
+                  </p>
+                  <button
+                    type="button" onClick={disableAuto}
+                    className="mt-1 text-[10px] text-neutral-400 hover:text-white cursor-pointer"
+                  >
+                    Enter it manually instead
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           <label className="block">
             <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">
@@ -142,7 +182,9 @@ function ScanDetailsForm({ onContinue }) {
         </button>
         {!canContinue && (
           <p className="mt-3 text-center text-[11px] text-neutral-600">
-            Enter your height and pick your sex to continue.
+            {autoMode
+              ? 'Pick your sex to continue.'
+              : 'Enter your height and pick your sex to continue.'}
           </p>
         )}
       </div>
@@ -154,19 +196,21 @@ function ScanDetailsForm({ onContinue }) {
 // Step 2 — Live camera capture. Camera/model spin up only while this is mounted.
 // On completion it persists everything and hands off to the results step.
 // ---------------------------------------------------------------------------
-function ScanCamera({ onComplete, onEditDetails }) {
+function ScanCamera({ onComplete, onEditDetails, debug }) {
   const [showToast, setShowToast] = useState(false);
+  const [heightToast, setHeightToast] = useState(false);
   const [zoom, setZoom] = useState(1);
   const {
-    height, weight, gender,
-    setBodyProfile, setSilhouette, setScanComplete,
+    height, weight, gender, autoHeight,
+    setBodyProfile, setSilhouette, setScanComplete, setHeight, setDetectedHeight, setHeightDebug,
   } = useMeasurementStore();
 
   const {
     videoRef, canvasRef,
     phase, status, aligned, holdProgress, reasons, silhouette, captureFlash,
-    devices, switchCamera
-  } = useSnapFitMeasurement();
+    devices, switchCamera,
+    detectedHeight, heightError, heightDebug,
+  } = useSnapFitMeasurement({ measureHeight: autoHeight });
 
   const handleSwitchCamera = () => {
     if (devices.length > 1) {
@@ -177,10 +221,33 @@ function ScanCamera({ onComplete, onEditDetails }) {
     }
   };
 
+  // Non-blocking notice if auto height measurement failed — never blocks the scan.
+  useEffect(() => {
+    if (!heightError) return;
+    setHeightToast(true);
+    const t = setTimeout(() => setHeightToast(false), 4500);
+    return () => clearTimeout(t);
+  }, [heightError]);
+
   useEffect(() => {
     if (phase !== 'done') return;
     setSilhouette(silhouette || null);
-    const profile = profileFromStore(height, weight, gender);
+    if (heightDebug) setHeightDebug(heightDebug);
+
+    // In auto mode, commit the detected height (if any) as the effective height.
+    let effHeight = height;
+    if (autoHeight) {
+      if (detectedHeight) {
+        effHeight = detectedHeight;
+        setHeight(detectedHeight);
+        setDetectedHeight(detectedHeight);
+      } else {
+        effHeight = 0; // detection failed → results will prompt for manual entry
+        setDetectedHeight(null);
+      }
+    }
+
+    const profile = profileFromStore(effHeight, weight, gender);
     if (profile) setBodyProfile(profile);
     setScanComplete(true);
     const t = setTimeout(onComplete, 1500);
@@ -244,6 +311,41 @@ function ScanCamera({ onComplete, onEditDetails }) {
                 </span>
               )}
             </button>
+
+            {/* Auto-height: card position indicator at chest height (front phase) */}
+            {autoHeight && phase === 'front' && (
+              <>
+                <div className="absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none">
+                  <div className="w-24 h-[3.8rem] rounded-md border-2 border-accent bg-accent/10 animate-pulse flex items-center justify-center shadow-[0_0_25px_rgba(212,255,63,0.35)]">
+                    <CreditCard className="h-6 w-6 text-accent" />
+                  </div>
+                </div>
+                <div className="absolute left-1/2 top-[55%] -translate-x-1/2 z-30 pointer-events-none px-4 w-full flex justify-center">
+                  <div className="flex items-center gap-2 bg-black/75 backdrop-blur-md border border-accent/40 px-4 py-2 rounded-full text-accent text-[11px] md:text-xs font-bold text-center">
+                    <CreditCard className="h-3.5 w-3.5 flex-shrink-0" /> Hold any credit card flat against your chest
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Hidden debug overlay (press D three times to toggle) */}
+            {debug && (
+              <div className="absolute bottom-2 left-2 z-40 max-w-[75%] rounded-lg bg-black/85 border border-accent/40 p-3 text-[10px] font-mono text-accent leading-relaxed pointer-events-none">
+                <div className="font-bold text-white mb-1">DEBUG · auto-height</div>
+                {heightDebug ? (
+                  <>
+                    <div>height: {heightDebug.heightCm != null ? heightDebug.heightCm.toFixed(1) : '—'} cm</div>
+                    <div>scale: {heightDebug.scaleMmPerPx != null ? heightDebug.scaleMmPerPx.toFixed(4) : '—'} mm/px</div>
+                    <div>pixelSpan: {heightDebug.pixelSpan?.toFixed(1)} px</div>
+                    <div>headOffset: {heightDebug.headOffset?.toFixed(1)} px</div>
+                    <div>fullSpan: {heightDebug.fullSpan?.toFixed(1)} px</div>
+                    <div>cardW: {heightDebug.cardWidthPx != null ? heightDebug.cardWidthPx.toFixed(1) : '—'} px · aspect {heightDebug.aspect != null ? heightDebug.aspect.toFixed(2) : '—'}</div>
+                    <div>cardConf: {heightDebug.confidence != null ? (heightDebug.confidence * 100).toFixed(0) + '%' : '—'}</div>
+                    <div>cardBox: {heightDebug.cardBox ? `${heightDebug.cardBox.x | 0},${heightDebug.cardBox.y | 0} ${heightDebug.cardBox.w | 0}×${heightDebug.cardBox.h | 0}` : 'none'}</div>
+                  </>
+                ) : <div className="text-neutral-400">waiting for front capture…</div>}
+              </div>
+            )}
           </div>
 
           <AnimatePresence>
@@ -255,6 +357,19 @@ function ScanCamera({ onComplete, onEditDetails }) {
                 className="absolute top-16 right-4 bg-neutral-900/90 backdrop-blur-md text-white px-4 py-2 rounded-lg text-xs font-medium shadow-xl z-20 border border-white/10"
               >
                 No additional camera detected.
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {heightToast && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute bottom-24 left-1/2 -translate-x-1/2 z-40 bg-amber-500/90 text-black px-4 py-2 rounded-lg text-xs font-semibold shadow-xl max-w-[85%] text-center"
+              >
+                Couldn't measure height automatically — you can enter it manually after the scan.
               </motion.div>
             )}
           </AnimatePresence>
@@ -288,7 +403,7 @@ function ScanCamera({ onComplete, onEditDetails }) {
           )}
 
           <div className="hidden md:flex mt-4 relative z-10 items-center justify-between text-[11px] text-neutral-500 border-t border-neutral-800 pt-3">
-            <span>{height} cm{weight != null ? ` · ${weight} kg` : ''} · {gender}</span>
+            <span>{autoHeight ? 'Height: auto (card)' : `${height} cm`}{weight != null ? ` · ${weight} kg` : ''} · {gender}</span>
             <button onClick={onEditDetails}
               className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
               <Pencil className="h-3 w-3" /> Edit details
@@ -308,13 +423,15 @@ function ScanCamera({ onComplete, onEditDetails }) {
 // Step 3 — Results. No camera. Reads persisted store data, so it shows on return
 // until the user leaves the site or hits Rescan.
 // ---------------------------------------------------------------------------
-function ResultsView({ onRescan, onEditDetails }) {
+function ResultsView({ onRescan, onEditDetails, debug }) {
   const navigate = useNavigate();
   const {
-    height, weight, gender, silhouette, setWeight, setBodyProfile, addScanToHistory,
+    height, weight, gender, silhouette, autoHeight, detectedHeight, heightDebug,
+    setWeight, setHeight, setDetectedHeight, setBodyProfile, addScanToHistory,
   } = useMeasurementStore();
 
   const [showPassport, setShowPassport] = useState(false);
+  const [editingHeight, setEditingHeight] = useState(false);
 
   const sex = gender === 'Men' ? 'male' : 'female';
   const predictions = predictMeasurements({ heightCm: height, weightKg: weight, sex });
@@ -370,7 +487,7 @@ function ResultsView({ onRescan, onEditDetails }) {
           </button>
 
           <div className="mt-3 flex items-center justify-between text-[11px] text-neutral-500">
-            <span>{height} cm{weight != null ? ` · ${weight} kg` : ''} · {gender}</span>
+            <span>{(detectedHeight || height) ? `${detectedHeight || height} cm` : '—'}{weight != null ? ` · ${weight} kg` : ''} · {gender}</span>
             <button onClick={onEditDetails}
               className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
               <Pencil className="h-3 w-3" /> Edit details
@@ -378,7 +495,16 @@ function ResultsView({ onRescan, onEditDetails }) {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-neutral-800 bg-neutral-900/40 p-6 md:p-8 shadow-xl">
+        <div className="rounded-3xl border border-neutral-800 bg-neutral-900/40 p-6 md:p-8 shadow-xl relative">
+          {debug && heightDebug && (
+            <div className="absolute top-3 right-3 z-20 rounded-lg bg-black/85 border border-accent/40 p-2.5 text-[10px] font-mono text-accent leading-relaxed pointer-events-none">
+              <div className="font-bold text-white mb-1">DEBUG · height</div>
+              <div>final: {heightDebug.heightCm != null ? heightDebug.heightCm.toFixed(1) : '—'} cm</div>
+              <div>scale: {heightDebug.scaleMmPerPx != null ? heightDebug.scaleMmPerPx.toFixed(4) : '—'}</div>
+              <div>span: {heightDebug.pixelSpan?.toFixed(0)}+{heightDebug.headOffset?.toFixed(0)}px</div>
+              <div>cardW: {heightDebug.cardWidthPx != null ? heightDebug.cardWidthPx.toFixed(0) : '—'}px</div>
+            </div>
+          )}
           <h3 className="text-lg font-bold text-white tracking-tight mb-5">Your measurements</h3>
 
           {profile ? (
@@ -394,6 +520,47 @@ function ResultsView({ onRescan, onEditDetails }) {
                   </span>
                 )}
               </div>
+
+              {/* Auto-detected height chip — tap to correct manually */}
+              {autoHeight && detectedHeight && (
+                <div className="mb-4">
+                  {!editingHeight ? (
+                    <button
+                      onClick={() => setEditingHeight(true)}
+                      className="inline-flex items-center gap-2 rounded-full bg-accent/10 border border-accent/40 px-3 py-1.5 text-[11px] text-accent font-semibold hover:bg-accent/15 transition-colors cursor-pointer"
+                    >
+                      <Ruler className="h-3.5 w-3.5" /> Detected height: {detectedHeight} cm
+                      <Pencil className="h-3 w-3 opacity-70" />
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number" inputMode="numeric" defaultValue={detectedHeight} autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            const v = Number(e.currentTarget.value);
+                            if (v > 0) { setHeight(v); setDetectedHeight(v); }
+                            setEditingHeight(false);
+                          }
+                        }}
+                        className="w-24 bg-black border border-accent/50 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent"
+                      />
+                      <button
+                        onClick={(e) => {
+                          const input = e.currentTarget.previousSibling;
+                          const v = Number(input.value);
+                          if (v > 0) { setHeight(v); setDetectedHeight(v); }
+                          setEditingHeight(false);
+                        }}
+                        className="rounded-lg bg-accent text-black text-xs font-bold px-3 py-2 cursor-pointer"
+                      >
+                        Save
+                      </button>
+                      <span className="text-[10px] text-neutral-500">cm</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <table className="w-full text-sm mb-5">
                 <thead>
@@ -459,18 +626,39 @@ function ResultsView({ onRescan, onEditDetails }) {
               </p>
             </>
           ) : (
-            // Weight was skipped (optional) — needed for the estimate. Add it here.
-            <div className="rounded-2xl border border-neutral-700 bg-black/40 p-5">
-              <p className="text-sm text-white font-semibold mb-1">Add your weight to finish</p>
-              <p className="text-[11px] text-neutral-500 mb-4">
-                The measurement estimate needs your weight. Height and sex are already saved.
-              </p>
-              <label className="block text-[11px] text-neutral-400">
-                Weight (kg)
-                <input type="number" inputMode="numeric" placeholder="65"
-                  onChange={(e) => setWeight(e.target.value ? Number(e.target.value) : null)}
-                  className="mt-1.5 w-full bg-black border border-neutral-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-accent" />
-              </label>
+            // Missing height (auto-detect may have failed) and/or weight. Graceful
+            // manual fallback — never a hard error.
+            <div className="rounded-2xl border border-neutral-700 bg-black/40 p-5 space-y-5">
+              {!height && (
+                <div>
+                  <p className="text-sm text-white font-semibold mb-1">Add your height to finish</p>
+                  <p className={`text-[11px] mb-3 ${autoHeight ? 'text-amber-400' : 'text-neutral-500'}`}>
+                    {autoHeight
+                      ? "Couldn't measure your height automatically — please enter it manually."
+                      : 'The measurement estimate needs your height.'}
+                  </p>
+                  <label className="block text-[11px] text-neutral-400">
+                    Height (cm)
+                    <input type="number" inputMode="numeric" placeholder="170"
+                      onChange={(e) => setHeight(e.target.value ? Number(e.target.value) : 0)}
+                      className="mt-1.5 w-full bg-black border border-neutral-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-accent" />
+                  </label>
+                </div>
+              )}
+              {!!height && !weight && (
+                <div>
+                  <p className="text-sm text-white font-semibold mb-1">Add your weight to finish</p>
+                  <p className="text-[11px] text-neutral-500 mb-3">
+                    The measurement estimate needs your weight. Height and sex are already saved.
+                  </p>
+                  <label className="block text-[11px] text-neutral-400">
+                    Weight (kg)
+                    <input type="number" inputMode="numeric" placeholder="65"
+                      onChange={(e) => setWeight(e.target.value ? Number(e.target.value) : null)}
+                      className="mt-1.5 w-full bg-black border border-neutral-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-accent" />
+                  </label>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -485,15 +673,33 @@ function ResultsView({ onRescan, onEditDetails }) {
 export default function ScanFit() {
   const { scanComplete, setScanComplete } = useMeasurementStore();
   const [step, setStep] = useState(scanComplete ? 'results' : 'details');
+  const [debug, setDebug] = useState(false);
+
+  // Hidden debug overlay: press "D" three times quickly to toggle.
+  useEffect(() => {
+    const taps = [];
+    const onKey = (e) => {
+      if (e.key !== 'd' && e.key !== 'D') return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return; // don't hijack typing
+      const now = Date.now();
+      taps.push(now);
+      while (taps.length && now - taps[0] > 800) taps.shift();
+      if (taps.length >= 3) { taps.length = 0; setDebug((v) => !v); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   if (step === 'details') {
     return <ScanDetailsForm onContinue={() => setStep('scan')} />;
   }
   if (step === 'scan') {
-    return <ScanCamera onComplete={() => setStep('results')} onEditDetails={() => setStep('details')} />;
+    return <ScanCamera debug={debug} onComplete={() => setStep('results')} onEditDetails={() => setStep('details')} />;
   }
   return (
     <ResultsView
+      debug={debug}
       onRescan={() => { setScanComplete(false); setStep('scan'); }}
       onEditDetails={() => setStep('details')}
     />
