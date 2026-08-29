@@ -7,35 +7,56 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { PoseLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 import {
   extractFrontMetrics, extractSideMetrics,
-  checkFrontAlignment, checkSideAlignment, chestGirthProxy,
-  estimateAutoHeight,
+  checkFrontAlignment, checkSideAlignment, checkHeightAlignment, chestGirthProxy,
 } from './poseMetrics';
+import {
+  estimateHeightFrame, HeightAccumulator, normalFromCameraPitch,
+} from './heightEstimator';
 import { sizeFromRatio, measurementsForSize } from './sizeChart';
 import { drawFrontGuide, drawSideGuide } from './alignmentGuide';
 
-const HOLD_MS = 1000; // must stay aligned this long before auto-capture
+const HOLD_MS = 1000;          // must stay aligned this long before auto-capture
+const HEIGHT_SAMPLES = 24;     // frames to fuse before trusting a height
+const HEIGHT_EVERY_N = 3;      // run the (costly) card scan on 1 frame in N
 
-export function useSnapFitMeasurement({ measureHeight = false } = {}) {
+// Why a frame was thrown away, in words the person in front of the camera can
+// act on. Every one of these is recoverable by moving, so say how.
+const HEIGHT_HINTS = {
+  'no-card': 'Hold your card flat against your chest',
+  'card-too-small': 'Hold the card flat and fully visible',
+  'card-not-flat': 'Press the card flat against your chest — do not angle it',
+  'card-too-tilted': 'Press the card flat against your chest',
+  'body-clipped': 'Step back — your whole body must be in frame',
+  'out-of-range': 'Hold the card flat against your chest',
+  'implausible-distance': 'Step back a little',
+};
+
+export function useSnapFitMeasurement({ measureHeight = false, gender = 'Women' } = {}) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const landmarkerRef = useRef(null);
   const heightCanvasRef = useRef(null);        // offscreen frame grab for card scan
   const measureHeightRef = useRef(measureHeight);
   measureHeightRef.current = measureHeight;
+  const genderRef = useRef(gender);
+  genderRef.current = gender;
 
   // Camera switching states
   const [devices, setDevices] = useState([]);
   const [currentDeviceId, setCurrentDeviceId] = useState(null);
 
   // Per-frame mutable state (refs, so the 60fps loop never triggers re-renders).
-  const phaseRef = useRef('front');
+  const phaseRef = useRef(measureHeight ? 'height' : 'front');
+  const heightAccRef = useRef(new HeightAccumulator({ minSamples: 8, maxSamples: 40 }));
+  const pitchRef = useRef(null);      // camera pitch in radians, from the device
+  const heightTickRef = useRef(0);
   const alignedSinceRef = useRef(null);
   const frontRef = useRef(null);
   const sideRef = useRef(null);
   const tickRef = useRef(0);
 
   // Render-facing state.
-  const [phase, setPhase] = useState('front');   // 'front' | 'side' | 'done'
+  const [phase, setPhase] = useState(measureHeight ? 'height' : 'front'); // 'height' | 'front' | 'side' | 'done'
   const [status, setStatus] = useState('Loading model…');
   const [aligned, setAligned] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0); // 0..1
@@ -47,6 +68,10 @@ export function useSnapFitMeasurement({ measureHeight = false } = {}) {
   const [detectedHeight, setDetectedHeight] = useState(null); // cm from card scale, or null
   const [heightError, setHeightError] = useState(false);      // auto height failed → fall back to manual
   const [heightDebug, setHeightDebug] = useState(null);       // dev-only debug payload
+  const [heightSigma, setHeightSigma] = useState(null);       // +/- cm, 1 sigma
+  const [heightConfidence, setHeightConfidence] = useState(0);
+  const [heightProgress, setHeightProgress] = useState(0);    // 0..1 sample fill
+  const [heightHint, setHeightHint] = useState(null);         // why frames are failing
 
   const goPhase = (p) => { phaseRef.current = p; setPhase(p); };
 
@@ -63,7 +88,12 @@ export function useSnapFitMeasurement({ measureHeight = false } = {}) {
     setDetectedHeight(null);
     setHeightError(false);
     setHeightDebug(null);
-    goPhase('front');
+    setHeightSigma(null);
+    setHeightConfidence(0);
+    setHeightProgress(0);
+    setHeightHint(null);
+    heightAccRef.current.reset();
+    goPhase(measureHeightRef.current ? 'height' : 'front');
   }, []);
 
 
@@ -74,6 +104,40 @@ export function useSnapFitMeasurement({ measureHeight = false } = {}) {
       setCurrentDeviceId(devices[nextIdx].deviceId);
     }
   }, [devices, currentDeviceId]);
+
+  // 0) Camera pitch from the device's own inclinometer.
+  //
+  // A standing person's plane is vertical, so only the CAMERA's pitch tips it
+  // relative to the image — and ignoring an 8 degree tilt costs about 8cm of
+  // height. The card cannot tell us this (far too few pixels, and its recovered
+  // normal is biased), but the accelerometer measures it directly.
+  useEffect(() => {
+    if (!measureHeight) return undefined;
+    let cancelled = false;
+    const onOrient = (e) => {
+      if (cancelled || e.beta == null) return;
+      // beta is 0 lying flat, 90 upright. A phone framing a person is near 90,
+      // so the deviation from 90 is the camera's pitch.
+      const deg = e.beta - 90;
+      // Beyond this the reading is more likely a device held oddly (or a
+      // landscape orientation we are not modelling) than a real camera tilt.
+      pitchRef.current = Math.abs(deg) <= 30 ? deg * Math.PI / 180 : null;
+    };
+    async function subscribe() {
+      try {
+        const DOE = window.DeviceOrientationEvent;
+        if (!DOE) return;
+        // iOS 13+ gates this behind an explicit permission call.
+        if (typeof DOE.requestPermission === 'function') {
+          const res = await DOE.requestPermission().catch(() => 'denied');
+          if (res !== 'granted') return;
+        }
+        window.addEventListener('deviceorientation', onOrient);
+      } catch { /* no inclinometer: we fall back to assuming a level camera */ }
+    }
+    subscribe();
+    return () => { cancelled = true; window.removeEventListener('deviceorientation', onOrient); };
+  }, [measureHeight]);
 
   // 1) Camera + model setup
   useEffect(() => {
@@ -93,9 +157,17 @@ export function useSnapFitMeasurement({ measureHeight = false } = {}) {
           videoRef.current.srcObject.getTracks().forEach(t => t.stop());
         }
 
+        // Resolution is not a nicety here: at a normal full-body distance a
+        // credit card spans only ~34 px in a 1280-wide frame, and the card's
+        // pixel size sets the scale for the entire height measurement. Asking
+        // for 1920 roughly halves that error for free. `ideal` keeps it from
+        // throwing on devices that cannot deliver it.
+        const RES = measureHeightRef.current
+          ? { width: { ideal: 1920 }, height: { ideal: 1080 } }
+          : { width: { ideal: 1280 }, height: { ideal: 720 } };
         const videoOpts = currentDeviceId
-          ? { deviceId: { exact: currentDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
-          : { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } };
+          ? { deviceId: { exact: currentDeviceId }, ...RES }
+          : { facingMode: { ideal: 'environment' }, ...RES };
 
         stream = await navigator.mediaDevices.getUserMedia({ video: videoOpts });
         if (videoRef.current) videoRef.current.srcObject = stream;
@@ -152,7 +224,7 @@ export function useSnapFitMeasurement({ measureHeight = false } = {}) {
   useEffect(() => {
     let raf;
 
-    function capture(cur, metrics, lm, video) {
+    function capture(cur, metrics) {
       alignedSinceRef.current = null;
       setHoldProgress(0);
       // Green "recorded" confirmation, auto-clears after ~1.6s.
@@ -162,33 +234,6 @@ export function useSnapFitMeasurement({ measureHeight = false } = {}) {
         frontRef.current = metrics;
         setSilhouette(metrics.silhouette || null);
 
-        // Optional: auto-measure height from a credit card held at the chest.
-        // Runs once on the captured frame; always has a graceful manual fallback.
-        if (measureHeightRef.current && lm && video && video.videoWidth) {
-          try {
-            const hc = heightCanvasRef.current || (heightCanvasRef.current = document.createElement('canvas'));
-            hc.width = video.videoWidth;
-            hc.height = video.videoHeight;
-            const hctx = hc.getContext('2d');
-            hctx.drawImage(video, 0, 0, hc.width, hc.height);
-            const img = hctx.getImageData(0, 0, hc.width, hc.height);
-            const est = estimateAutoHeight(img.data, hc.width, hc.height, lm);
-            setHeightDebug(est.debug || null);
-            if (est.ok) {
-              setDetectedHeight(Math.round(est.heightCm));
-              setHeightError(false);
-              console.log('[SnapFit height] detected=%scm', Math.round(est.heightCm), est.debug);
-            } else {
-              setDetectedHeight(null);
-              setHeightError(true);
-              console.log('[SnapFit height] auto-measure failed:', est.reason, est.debug);
-            }
-          } catch (e) {
-            setDetectedHeight(null);
-            setHeightError(true);
-            console.log('[SnapFit height] error:', e);
-          }
-        }
         // Hip width A/B log: old landmark distance vs new mask-edge width, in the
         // same (frame px) units, so we can compare against real tape measurements
         // before fully switching the hip measurement over to the mask method.
@@ -221,6 +266,62 @@ export function useSnapFitMeasurement({ measureHeight = false } = {}) {
       }
     }
 
+    // Height capture: fuse many frames rather than trusting one.
+    //
+    // A single frame is genuinely not enough here. At a normal full-body
+    // distance the card spans only a few dozen pixels, so per-frame estimates
+    // scatter by a couple of centimetres; the accumulator's median over ~24 of
+    // them is far tighter than any one of them, and it also throws out the
+    // frames where the detector latched onto a sleeve instead of the card.
+    function runHeightFrame(lm, video, maskObj) {
+      const acc = heightAccRef.current;
+      const hc = heightCanvasRef.current || (heightCanvasRef.current = document.createElement('canvas'));
+      hc.width = video.videoWidth;
+      hc.height = video.videoHeight;
+      const hctx = hc.getContext('2d', { willReadFrequently: true });
+      hctx.drawImage(video, 0, 0, hc.width, hc.height);
+      const img = hctx.getImageData(0, 0, hc.width, hc.height);
+
+      const est = estimateHeightFrame(img.data, hc.width, hc.height, lm, maskObj, {
+        sex: genderRef.current === 'Men' ? 'Male' : 'Female',
+      });
+      acc.add(est, est.frame);
+
+      if (!est.ok) setHeightHint(HEIGHT_HINTS[est.reason] || null);
+      else setHeightHint(null);
+
+      setHeightProgress(Math.min(1, acc.count / HEIGHT_SAMPLES));
+      const live = acc.result();
+      if (live) {
+        setDetectedHeight(Math.round(live.heightCm));
+        setHeightSigma(live.sigmaCm);
+        setHeightConfidence(live.confidence);
+      }
+      setHeightDebug({ ...(est.debug || {}), reason: est.reason, samples: acc.count });
+
+      if (acc.count >= HEIGHT_SAMPLES) {
+        const normalOverride = pitchRef.current != null
+          ? normalFromCameraPitch(pitchRef.current) : null;
+        const fin = acc.finalize({ normalOverride });
+        if (fin) {
+          setDetectedHeight(Math.round(fin.heightCm));
+          setHeightSigma(fin.sigmaCm);
+          setHeightConfidence(fin.confidence);
+          setHeightError(false);
+          setHeightHint(null);
+          console.log('[SnapFit height] %scm +/- %scm  (n=%s/%s, pitchCorrected=%s)',
+            fin.heightCm.toFixed(1), fin.sigmaCm.toFixed(1), fin.nUsed, fin.nTotal, fin.pitchCorrected);
+        } else {
+          setHeightError(true);
+        }
+        setCaptureFlash('height');
+        setTimeout(() => setCaptureFlash(null), 1600);
+        alignedSinceRef.current = null;
+        setHoldProgress(0);
+        goPhase('front');
+      }
+    }
+
     function loop() {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -242,7 +343,7 @@ export function useSnapFitMeasurement({ measureHeight = false } = {}) {
         // (they hold GPU memory and leak if not released).
         let maskObj = null;
         if (res.segmentationMasks && res.segmentationMasks.length) {
-          if (cur === 'front' || cur === 'side') {
+          if (cur === 'front' || cur === 'side' || cur === 'height') {
             const m = res.segmentationMasks[0];
             maskObj = { data: m.getAsFloat32Array(), width: m.width, height: m.height };
           }
@@ -264,6 +365,22 @@ export function useSnapFitMeasurement({ measureHeight = false } = {}) {
             ctx.stroke();
           }
 
+          if (cur === 'height') {
+            const hcheck = checkHeightAlignment(lm);
+            drawFrontGuide(ctx, canvas.width, canvas.height, hcheck.aligned);
+            setAligned(hcheck.aligned);
+            if ((tickRef.current++ % 6) === 0) setReasons(hcheck.reasons);
+            if (hcheck.aligned) {
+              // The card scan is the expensive part of the frame, so it runs on
+              // a fraction of frames; the pose check still runs on all of them.
+              if ((heightTickRef.current++ % HEIGHT_EVERY_N) === 0) {
+                runHeightFrame(lm, video, maskObj);
+              }
+            }
+            raf = requestAnimationFrame(loop);
+            return;
+          }
+
           const isFront = cur === 'front';
           const check = (isFront ? checkFrontAlignment : checkSideAlignment)(lm);
           (isFront ? drawFrontGuide : drawSideGuide)(ctx, canvas.width, canvas.height, check.aligned);
@@ -283,7 +400,7 @@ export function useSnapFitMeasurement({ measureHeight = false } = {}) {
             if (alignedSinceRef.current == null) alignedSinceRef.current = performance.now();
             const held = performance.now() - alignedSinceRef.current;
             setHoldProgress(Math.min(held / HOLD_MS, 1));
-            if (held >= HOLD_MS) capture(cur, metrics, lm, video);
+            if (held >= HOLD_MS) capture(cur, metrics);
           } else {
             alignedSinceRef.current = null;
             setHoldProgress(0);
@@ -302,5 +419,6 @@ export function useSnapFitMeasurement({ measureHeight = false } = {}) {
     phase, status, aligned, holdProgress, reasons, debug, result, silhouette, captureFlash,
     reset, devices, switchCamera,
     detectedHeight, heightError, heightDebug,
+    heightSigma, heightConfidence, heightProgress, heightHint,
   };
 }

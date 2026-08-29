@@ -25,8 +25,9 @@ import TipsCard from '../components/TipsCard';
 import SizePassport from '../components/SizePassport';
 
 const PHASE_LABEL = {
-  front: 'Step 1 · Front view',
-  side: 'Step 2 · Side view',
+  height: 'Step 1 · Height',
+  front: 'Front view',
+  side: 'Side view',
   done: 'Scan complete',
 };
 
@@ -210,7 +211,8 @@ function ScanCamera({ onComplete, onEditDetails, debug }) {
     phase, status, aligned, holdProgress, reasons, silhouette, captureFlash,
     devices, switchCamera,
     detectedHeight, heightError, heightDebug,
-  } = useSnapFitMeasurement({ measureHeight: autoHeight });
+    heightSigma, heightConfidence, heightProgress, heightHint,
+  } = useSnapFitMeasurement({ measureHeight: autoHeight, gender });
 
   const handleSwitchCamera = () => {
     if (devices.length > 1) {
@@ -312,18 +314,34 @@ function ScanCamera({ onComplete, onEditDetails, debug }) {
               )}
             </button>
 
-            {/* Auto-height: card position indicator at chest height (front phase) */}
-            {autoHeight && phase === 'front' && (
+            {/* Auto-height: its own capture step. Arms stay DOWN here, holding
+                the card flat — which is why it cannot share the front pose,
+                where the arms must be out for the silhouette widths. */}
+            {autoHeight && phase === 'height' && (
               <>
                 <div className="absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none">
                   <div className="w-24 h-[3.8rem] rounded-md border-2 border-accent bg-accent/10 animate-pulse flex items-center justify-center shadow-[0_0_25px_rgba(212,255,63,0.35)]">
                     <CreditCard className="h-6 w-6 text-accent" />
                   </div>
                 </div>
-                <div className="absolute left-1/2 top-[55%] -translate-x-1/2 z-30 pointer-events-none px-4 w-full flex justify-center">
+                <div className="absolute left-1/2 top-[55%] -translate-x-1/2 z-30 pointer-events-none px-4 w-full flex flex-col items-center gap-2">
                   <div className="flex items-center gap-2 bg-black/75 backdrop-blur-md border border-accent/40 px-4 py-2 rounded-full text-accent text-[11px] md:text-xs font-bold text-center">
-                    <CreditCard className="h-3.5 w-3.5 flex-shrink-0" /> Hold any credit card flat against your chest
+                    <CreditCard className="h-3.5 w-3.5 flex-shrink-0" />
+                    {heightHint || 'Hold any card FLAT against your chest, arms down'}
                   </div>
+                  {heightProgress > 0 && (
+                    <div className="w-40 h-1.5 rounded-full bg-white/15 overflow-hidden">
+                      <div
+                        className="h-full bg-accent transition-[width] duration-150"
+                        style={{ width: `${Math.round(heightProgress * 100)}%` }}
+                      />
+                    </div>
+                  )}
+                  {detectedHeight != null && (
+                    <div className="text-[11px] font-mono text-accent/90">
+                      {detectedHeight} cm{heightSigma != null ? ` ±${heightSigma.toFixed(1)}` : ''}
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -334,16 +352,17 @@ function ScanCamera({ onComplete, onEditDetails, debug }) {
                 <div className="font-bold text-white mb-1">DEBUG · auto-height</div>
                 {heightDebug ? (
                   <>
-                    <div>height: {heightDebug.heightCm != null ? heightDebug.heightCm.toFixed(1) : '—'} cm</div>
-                    <div>scale: {heightDebug.scaleMmPerPx != null ? heightDebug.scaleMmPerPx.toFixed(4) : '—'} mm/px</div>
-                    <div>pixelSpan: {heightDebug.pixelSpan?.toFixed(1)} px</div>
-                    <div>headOffset: {heightDebug.headOffset?.toFixed(1)} px</div>
-                    <div>fullSpan: {heightDebug.fullSpan?.toFixed(1)} px</div>
-                    <div>cardW: {heightDebug.cardWidthPx != null ? heightDebug.cardWidthPx.toFixed(1) : '—'} px · aspect {heightDebug.aspect != null ? heightDebug.aspect.toFixed(2) : '—'}</div>
-                    <div>cardConf: {heightDebug.confidence != null ? (heightDebug.confidence * 100).toFixed(0) + '%' : '—'}</div>
-                    <div>cardBox: {heightDebug.cardBox ? `${heightDebug.cardBox.x | 0},${heightDebug.cardBox.y | 0} ${heightDebug.cardBox.w | 0}×${heightDebug.cardBox.h | 0}` : 'none'}</div>
+                    <div>height: {detectedHeight != null ? detectedHeight : '—'} cm
+                      {heightSigma != null ? ` ±${heightSigma.toFixed(2)}` : ''}
+                      {heightConfidence ? ` · conf ${(heightConfidence * 100).toFixed(0)}%` : ''}</div>
+                    <div>samples: {heightDebug.samples ?? 0}/24{heightDebug.reason ? ` · last: ${heightDebug.reason}` : ''}</div>
+                    <div>card: {heightDebug.card ? `${heightDebug.card.longEdgePx.toFixed(1)}px aspect ${heightDebug.card.aspect.toFixed(3)}` : 'none'}</div>
+                    <div>rect {heightDebug.card ? heightDebug.card.rectangularity.toFixed(2) : '—'} · edge {heightDebug.card ? heightDebug.card.edgeSupport.toFixed(2) : '—'} · reproj {heightDebug.reprojPx != null ? heightDebug.reprojPx.toFixed(2) + 'px' : '—'}</div>
+                    <div>focal: {heightDebug.focal ? `${heightDebug.focal.f.toFixed(0)}px (${heightDebug.focal.source})` : '—'}</div>
+                    <div>dist: {heightDebug.reconstruction ? `${(heightDebug.reconstruction.cardDistanceMm / 10).toFixed(0)}cm card · offset ${heightDebug.reconstruction.halfDepthMm.toFixed(0)}mm` : '—'}</div>
+                    <div>extent: {heightDebug.extent ? heightDebug.extent.source : '—'}</div>
                   </>
-                ) : <div className="text-neutral-400">waiting for front capture…</div>}
+                ) : <div className="text-neutral-400">waiting for height capture…</div>}
               </div>
             )}
           </div>
@@ -395,9 +414,11 @@ function ScanCamera({ onComplete, onEditDetails, debug }) {
                 </ul>
               )}
               <p className="mt-3 text-[11px] text-neutral-500 leading-relaxed">
-                {phase === 'front'
-                  ? 'Stand straight, full body in the outline. It captures automatically once aligned.'
-                  : 'Now turn 90° to your side, full body in the outline.'}
+                {phase === 'height'
+                  ? 'Arms down, holding any card flat against your chest. Keep your whole body inside the outline — it measures over a couple of seconds.'
+                  : phase === 'front'
+                    ? 'Now put the card away and raise your arms slightly. Full body in the outline; it captures automatically once aligned.'
+                    : 'Now turn 90° to your side, full body in the outline.'}
               </p>
             </div>
           )}
@@ -499,10 +520,10 @@ function ResultsView({ onRescan, onEditDetails, debug }) {
           {debug && heightDebug && (
             <div className="absolute top-3 right-3 z-20 rounded-lg bg-black/85 border border-accent/40 p-2.5 text-[10px] font-mono text-accent leading-relaxed pointer-events-none">
               <div className="font-bold text-white mb-1">DEBUG · height</div>
-              <div>final: {heightDebug.heightCm != null ? heightDebug.heightCm.toFixed(1) : '—'} cm</div>
-              <div>scale: {heightDebug.scaleMmPerPx != null ? heightDebug.scaleMmPerPx.toFixed(4) : '—'}</div>
-              <div>span: {heightDebug.pixelSpan?.toFixed(0)}+{heightDebug.headOffset?.toFixed(0)}px</div>
-              <div>cardW: {heightDebug.cardWidthPx != null ? heightDebug.cardWidthPx.toFixed(0) : '—'}px</div>
+              <div>final: {detectedHeight != null ? detectedHeight : '—'} cm</div>
+              <div>samples: {heightDebug.samples ?? '—'}</div>
+              <div>cardW: {heightDebug.card ? heightDebug.card.longEdgePx.toFixed(0) : '—'}px</div>
+              <div>focal: {heightDebug.focal ? heightDebug.focal.source : '—'}</div>
             </div>
           )}
           <h3 className="text-lg font-bold text-white tracking-tight mb-5">Your measurements</h3>
