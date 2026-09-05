@@ -279,7 +279,11 @@ function ScanCamera({ onComplete, onEditDetails, debug }) {
             </span>
           </div>
 
-          <div className="flex-1 relative z-0 md:rounded-2xl overflow-hidden bg-black md:aspect-video group">
+          {/* Portrait frame on desktop. A standing person is tall, so a 16:9
+              landscape box makes them fit the SHORT axis — they end up small
+              with dead space either side. Height-driven so the frame always
+              fits the viewport without scrolling, width follows from 9:16. */}
+          <div className="flex-1 relative z-0 md:flex-none md:h-[74vh] md:w-auto md:aspect-[9/16] md:mx-auto md:rounded-2xl overflow-hidden bg-black group">
             <div className="absolute inset-0 transition-transform duration-300 origin-center" style={{ transform: `scale(${zoom})` }}>
               <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
               <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-cover" />

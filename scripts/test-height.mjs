@@ -14,6 +14,7 @@ import {
 } from '../Snapfit-UI/src/scanfit/heightEstimator.js';
 import { detectCardQuad, CARD_LONG_MM, CARD_SHORT_MM } from '../Snapfit-UI/src/scanfit/cardDetect.js';
 import { focalFromHomography, homographyFrom4 } from '../Snapfit-UI/src/scanfit/linalg.js';
+import { visibleRegion } from '../Snapfit-UI/src/scanfit/alignmentGuide.js';
 
 // ---------------------------------------------------------------------------
 // Tiny 3D scene builder
@@ -346,6 +347,36 @@ section('9. Camera pitch: cost of ignoring it, and the sensor correction');
     check('pitch=' + pitch + 'deg corrected within 20mm', Math.abs(eS) < 20, eS.toFixed(1) + 'mm');
   }
 }
+
+// ---------------------------------------------------------------------------
+section('10. Guide overlay stays inside the visible frame');
+{
+  // The canvas is sized in VIDEO pixels but shown with object-fit: cover, so a
+  // frame shaped differently from the stream crops the rest away. The guide has
+  // to be laid out inside what survives that crop, or its edges are simply not
+  // on screen — which is what used to happen on desktop, where a 16:9 stream in
+  // a portrait frame hid both sides of the outline and both hand markers.
+  const shapes = [
+    ['1920x1080 stream, 416x740 portrait frame', 1920, 1080, 416, 740],
+    ['1080x1920 stream, 390x844 phone frame', 1080, 1920, 390, 844],
+    ['1080x1920 stream, 405x720 matched frame', 1080, 1920, 405, 720],
+    ['1280x720 stream, 900x506 landscape frame', 1280, 720, 900, 506],
+  ];
+  for (const [name, vw, vh, bw, bh] of shapes) {
+    const r = visibleRegion(vw, vh, bw, bh);
+    // Every horizontal feature the guides draw, in design coordinates.
+    const feats = [0.10, 0.20, 0.38, 0.50, 0.62, 0.80, 0.90];
+    const mapped = feats.map((u) => r.x0 + (r.x1 - r.x0) * u);
+    const inside = mapped.every((x) => x >= r.x0 - 1e-9 && x <= r.x1 + 1e-9);
+    // And the old, unmapped layout, to show the bug this replaced.
+    const oldEdges = [0.16, 0.27, 0.73, 0.84];
+    const oldClipped = oldEdges.filter((x) => x < r.x0 || x > r.x1).length;
+    check(name, inside,
+      'visible x ' + r.x0.toFixed(3) + '..' + r.x1.toFixed(3)
+      + (oldClipped ? '  (old layout clipped ' + oldClipped + '/4 features)' : ''));
+  }
+}
+
 
 // ---------------------------------------------------------------------------
 console.log(`\n${'='.repeat(58)}`);

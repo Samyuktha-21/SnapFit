@@ -13,7 +13,7 @@ import {
   estimateHeightFrame, HeightAccumulator, normalFromCameraPitch,
 } from './heightEstimator';
 import { sizeFromRatio, measurementsForSize } from './sizeChart';
-import { drawFrontGuide, drawSideGuide } from './alignmentGuide';
+import { drawFrontGuide, drawSideGuide, visibleRegion } from './alignmentGuide';
 
 const HOLD_MS = 1000;          // must stay aligned this long before auto-capture
 const HEIGHT_SAMPLES = 24;     // frames to fuse before trusting a height
@@ -162,9 +162,21 @@ export function useSnapFitMeasurement({ measureHeight = false, gender = 'Women' 
         // pixel size sets the scale for the entire height measurement. Asking
         // for 1920 roughly halves that error for free. `ideal` keeps it from
         // throwing on devices that cannot deliver it.
-        const RES = measureHeightRef.current
-          ? { width: { ideal: 1920 }, height: { ideal: 1080 } }
-          : { width: { ideal: 1280 }, height: { ideal: 720 } };
+        //
+        // Orientation matters just as much as pixel count. A person is TALL, so
+        // a landscape stream spends its long axis on empty room either side and
+        // forces you to stand far enough back to fit head-to-toe inside the
+        // short axis — which is what makes you look tiny in frame. Asking for a
+        // portrait stream puts the long axis along the body instead: you fill
+        // the frame from much closer, and the extra pixels land on you and on
+        // the card, so the framing fix improves the measurement too.
+        const portrait = typeof window !== 'undefined'
+          && window.innerHeight >= window.innerWidth;
+        const long = measureHeightRef.current ? 1920 : 1280;
+        const short = measureHeightRef.current ? 1080 : 720;
+        const RES = portrait
+          ? { width: { ideal: short }, height: { ideal: long } }
+          : { width: { ideal: long }, height: { ideal: short } };
         const videoOpts = currentDeviceId
           ? { deviceId: { exact: currentDeviceId }, ...RES }
           : { facingMode: { ideal: 'environment' }, ...RES };
@@ -331,6 +343,11 @@ export function useSnapFitMeasurement({ measureHeight = false, gender = 'Women' 
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
+        // Which part of the frame the user can actually see. The canvas is in
+        // video pixels but displayed with object-fit: cover, so a frame shaped
+        // differently from the stream crops the rest away.
+        const safe = visibleRegion(
+          canvas.width, canvas.height, canvas.clientWidth, canvas.clientHeight);
         const res = lmer.detectForVideo(video, performance.now());
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -367,7 +384,7 @@ export function useSnapFitMeasurement({ measureHeight = false, gender = 'Women' 
 
           if (cur === 'height') {
             const hcheck = checkHeightAlignment(lm);
-            drawFrontGuide(ctx, canvas.width, canvas.height, hcheck.aligned);
+            drawFrontGuide(ctx, canvas.width, canvas.height, hcheck.aligned, safe);
             setAligned(hcheck.aligned);
             if ((tickRef.current++ % 6) === 0) setReasons(hcheck.reasons);
             if (hcheck.aligned) {
@@ -383,7 +400,7 @@ export function useSnapFitMeasurement({ measureHeight = false, gender = 'Women' 
 
           const isFront = cur === 'front';
           const check = (isFront ? checkFrontAlignment : checkSideAlignment)(lm);
-          (isFront ? drawFrontGuide : drawSideGuide)(ctx, canvas.width, canvas.height, check.aligned);
+          (isFront ? drawFrontGuide : drawSideGuide)(ctx, canvas.width, canvas.height, check.aligned, safe);
 
           const metrics = isFront
             ? extractFrontMetrics(lm, canvas.width, canvas.height, maskObj)
